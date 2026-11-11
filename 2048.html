@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0712">
+<title>NULL · 2048</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0712; color: #e9e4f5;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #0f0a18; border: 1px solid #2a1f3d; border-radius: 12px; box-shadow: 0 0 40px rgba(139,92,246,.18); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script src="base.js"></script>
+<script>
+// NULL · 2048
+const N = 4, TAM = 320, BX = (W - TAM) / 2, BY = 170, G = 10, CT = (TAM - G * (N + 1)) / N
+const sMueve = () => tono(300, 260, 'sine', 0.04, 0.04)
+const sJunta = () => tono(520, 780, 'sine', 0.07, 0.07)
+const sFin = () => tono(220, 50, 'sawtooth', 0.4, 0.18)
+const COL = { 2: '#2b1d47', 4: '#38265c', 8: '#7c3aed', 16: '#8b5cf6', 32: '#a855f7', 64: '#c026d3', 128: '#0891b2', 256: '#06b6d4', 512: '#22d3ee', 1024: '#f59e0b', 2048: '#fbbf24' }
+
+let estado = 'menu', t = 0, ultimo = 0, finEn = 0
+let tab, puntos, record = leerRecord('2048'), nuevoRecord, nuevas, ganado, avisoGano
+
+function vacias() { const v = []; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (!tab[i][j]) v.push([i, j]); return v }
+function agregar() {
+  const v = vacias(); if (!v.length) return
+  const [i, j] = v[Math.floor(Math.random() * v.length)]
+  tab[i][j] = Math.random() < 0.9 ? 2 : 4
+  nuevas.push({ i, j, t: 0 })
+}
+function reiniciar() {
+  tab = Array.from({ length: N }, () => Array(N).fill(0))
+  puntos = 0; nuevoRecord = false; nuevas = []; ganado = false; avisoGano = 0
+  agregar(); agregar()
+}
+reiniciar()
+
+function deslizarFila(fila) {
+  const v = fila.filter(n => n), r = []
+  let ganancia = 0
+  for (let k = 0; k < v.length; k++) {
+    if (v[k] === v[k + 1]) { r.push(v[k] * 2); ganancia += v[k] * 2; k++ }
+    else r.push(v[k])
+  }
+  while (r.length < N) r.push(0)
+  return { r, ganancia }
+}
+
+function mover(d) {
+  if (estado !== 'juego') return
+  let cambio = false, gan = 0
+  for (let k = 0; k < N; k++) {
+    let linea = []
+    for (let m = 0; m < N; m++) {
+      const [i, j] = d === 'izq' ? [k, m] : d === 'der' ? [k, N - 1 - m] : d === 'arriba' ? [m, k] : [N - 1 - m, k]
+      linea.push(tab[i][j])
+    }
+    const { r, ganancia } = deslizarFila(linea)
+    gan += ganancia
+    for (let m = 0; m < N; m++) {
+      const [i, j] = d === 'izq' ? [k, m] : d === 'der' ? [k, N - 1 - m] : d === 'arriba' ? [m, k] : [N - 1 - m, k]
+      if (tab[i][j] !== r[m]) cambio = true
+      tab[i][j] = r[m]
+    }
+  }
+  if (!cambio) return
+  puntos += gan
+  if (gan) sJunta(); else sMueve()
+  agregar()
+  if (!ganado && tab.some(f => f.some(n => n >= 2048))) { ganado = true; avisoGano = 150 }
+  if (puntos > record) { record = puntos; nuevoRecord = true; guardarRecord('2048', record) }
+  if (!hayMovimientos()) { estado = 'fin'; sFin(); finEn = Date.now() + 700 }
+}
+
+function hayMovimientos() {
+  if (vacias().length) return true
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    if (j < N - 1 && tab[i][j] === tab[i][j + 1]) return true
+    if (i < N - 1 && tab[i][j] === tab[i + 1][j]) return true
+  }
+  return false
+}
+alDeslizar(mover)
+
+function cuadro(px, py, w, h, r) { x.beginPath(); x.roundRect ? x.roundRect(px, py, w, h, r) : x.rect(px, py, w, h); x.fill() }
+
+function dibujar() {
+  x.clearRect(0, 0, W, H)
+  dibujarEstrellas()
+  x.fillStyle = '#1a1129'; cuadro(BX, BY, TAM, TAM, 12)
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const px = BX + G + j * (CT + G), py = BY + G + i * (CT + G)
+    x.fillStyle = '#231836'; cuadro(px, py, CT, CT, 8)
+    const n = tab[i][j]; if (!n) continue
+    const nv = nuevas.find(a => a.i === i && a.j === j)
+    const s = nv ? Math.min(1, 0.3 + nv.t * 0.12) : 1
+    const cx = px + CT / 2, cy = py + CT / 2, w = CT * s
+    x.fillStyle = COL[n] || '#fde68a'; cuadro(cx - w / 2, cy - w / 2, w, w, 8)
+    const tamF = n < 100 ? 30 : n < 1000 ? 26 : n < 10000 ? 20 : 16
+    texto(String(n), cx, cy + tamF * 0.36, tamF * s, n >= 1024 ? '#1a1129' : '#ffffff', '900')
+  }
+  if (estado !== 'menu') {
+    texto('PUNTOS', BX, 112, 12, GRIS2, '700', 'left')
+    texto(String(puntos), BX, 142, 26, '#ffffff', '900', 'left')
+    texto('RÉCORD', BX + TAM, 112, 12, GRIS2, '700', 'right')
+    texto(String(record), BX + TAM, 142, 20, GRIS, '900', 'right')
+    texto('Desliza para mover', W / 2, BY + TAM + 36, 13, GRIS2, '400')
+    if (avisoGano > 0) texto('¡LLEGASTE A 2048!', W / 2, BY + TAM + 70, 18, ORO, '900')
+  }
+  if (estado === 'menu') pantallaMenu('2 0 4 8', ['Desliza en cualquier dirección', 'Dos números iguales se juntan', 'Llega al 2048 (y sigue si puedes)', 'Pierdes si ya no hay movimientos'], record, t)
+  if (estado === 'fin') pantallaFin('SIN MOVIMIENTOS', puntos, 'ficha más alta: ' + Math.max(...tab.flat()), nuevoRecord, record, Date.now() > finEn, t)
+}
+
+function ciclo(ms) {
+  if (!ultimo) ultimo = ms
+  const dt = Math.min((ms - ultimo) / 16.67, 2)
+  ultimo = ms; t += dt
+  moverEstrellas(dt, 0.15)
+  nuevas.forEach(a => a.t += dt); nuevas = nuevas.filter(a => a.t < 8)
+  if (avisoGano > 0) avisoGano -= dt
+  dibujar()
+  requestAnimationFrame(ciclo)
+}
+
+c.addEventListener('pointerdown', e => {
+  e.preventDefault(); initAudio()
+  const pt = enLienzo(e)
+  if ((estado === 'menu' || estado === 'fin') && tocaVolver(pt)) return volver()
+  if (estado === 'menu') { reiniciar(); estado = 'juego'; return }
+  if (estado === 'fin' && Date.now() > finEn) { reiniciar(); estado = 'juego' }
+})
+addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    initAudio()
+    if (estado === 'menu' || (estado === 'fin' && Date.now() > finEn)) { reiniciar(); estado = 'juego' }
+  }
+})
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>

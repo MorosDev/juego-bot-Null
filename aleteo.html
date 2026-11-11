@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0712">
+<title>NULL · Aleteo</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0712; color: #e9e4f5;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #0f0a18; border: 1px solid #2a1f3d; border-radius: 12px; box-shadow: 0 0 40px rgba(139,92,246,.18); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script src="base.js"></script>
+<script>
+// NULL · Aleteo
+const sAleta = () => tono(500, 750, 'triangle', 0.07, 0.06)
+const sPunto = () => tono(900, 1300, 'sine', 0.06, 0.08)
+const sFin = () => tono(260, 50, 'sawtooth', 0.35, 0.2)
+const SUELO = H - 46, ANCHO_TUBO = 58
+
+let estado = 'menu', t = 0, ultimo = 0, finEn = 0, sacudida = 0
+let ave, tubos, puntos, record = leerRecord('aleteo'), vel, nuevoRecord, sueloX = 0
+
+function reiniciar() {
+  ave = { x: 96, y: H / 2 - 40, vy: 0, r: 11 }
+  tubos = []; puntos = 0; vel = 2.4; nuevoRecord = false
+  for (let i = 0; i < 3; i++) nuevoTubo(W + 80 + i * 210)
+}
+function nuevoTubo(px) {
+  const hueco = Math.max(128, 165 - puntos * 1.5)
+  const arriba = 80 + Math.random() * (SUELO - 160 - hueco)
+  tubos.push({ x: px, arriba, hueco, contado: false })
+}
+reiniciar()
+
+function aletear() { ave.vy = -6.4; sAleta() }
+
+function terminar() {
+  estado = 'fin'; sFin(); sacudida = 12
+  if (puntos > record) { record = puntos; nuevoRecord = true; guardarRecord('aleteo', record) }
+  finEn = Date.now() + 700
+}
+
+function actualizar(dt) {
+  ave.vy = Math.min(ave.vy + 0.36 * dt, 9)
+  ave.y += ave.vy * dt
+  tubos.forEach(tb => { tb.x -= vel * dt })
+  if (tubos[0].x < -ANCHO_TUBO) { tubos.shift(); nuevoTubo(tubos[tubos.length - 1].x + 210) }
+  for (const tb of tubos) {
+    if (!tb.contado && tb.x + ANCHO_TUBO < ave.x) { tb.contado = true; puntos++; sPunto(); vel = Math.min(4.2, vel + 0.05) }
+    const dentroX = ave.x + ave.r > tb.x && ave.x - ave.r < tb.x + ANCHO_TUBO
+    if (dentroX && (ave.y - ave.r < tb.arriba || ave.y + ave.r > tb.arriba + tb.hueco)) return terminar()
+  }
+  if (ave.y - ave.r < 0) { ave.y = ave.r; ave.vy = Math.max(ave.vy, 0) }
+  if (ave.y + ave.r > SUELO) terminar()
+}
+
+function dibujarAve() {
+  x.save(); x.translate(ave.x, ave.y)
+  x.rotate(Math.max(-0.5, Math.min(1.1, ave.vy * 0.09)))
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(0, 0, ave.r, 0, 7); x.fill()
+  const ala = Math.sin(t * 0.6) * 4
+  x.fillStyle = MORADO; x.beginPath(); x.ellipse(-3, 2 + ala * 0.3, 7, 4, 0, 0, 7); x.fill()
+  x.fillStyle = '#0f0a18'; x.fillRect(4, -5, 3, 3)
+  x.fillStyle = ORO; x.beginPath(); x.moveTo(9, -1); x.lineTo(16, 2); x.lineTo(9, 5); x.fill()
+  x.restore()
+}
+
+function dibujar() {
+  x.clearRect(0, 0, W, H)
+  x.save()
+  if (sacudida > 0) x.translate((Math.random() - .5) * sacudida, (Math.random() - .5) * sacudida)
+  dibujarEstrellas()
+  tubos.forEach(tb => {
+    x.fillStyle = '#2b1d47'
+    x.fillRect(tb.x, 0, ANCHO_TUBO, tb.arriba)
+    x.fillRect(tb.x, tb.arriba + tb.hueco, ANCHO_TUBO, SUELO - tb.arriba - tb.hueco)
+    x.fillStyle = MORADO
+    x.fillRect(tb.x - 4, tb.arriba - 14, ANCHO_TUBO + 8, 14)
+    x.fillRect(tb.x - 4, tb.arriba + tb.hueco, ANCHO_TUBO + 8, 14)
+  })
+  x.fillStyle = '#1a1129'; x.fillRect(0, SUELO, W, H - SUELO)
+  x.fillStyle = '#3a2d55'
+  for (let i = -1; i < W / 24 + 1; i++) x.fillRect(i * 24 - sueloX, SUELO, 12, 4)
+  if (estado !== 'menu') dibujarAve()
+  x.restore()
+
+  if (estado === 'juego' || estado === 'pausa') texto(String(puntos), W / 2, 90, 44, '#ffffff', '900')
+  if (estado === 'menu') pantallaMenu('A L E T E O', ['Toca la pantalla para subir', 'Pasa entre los tubos', 'Cada tubo es un punto', 'Cada vez va más rápido'], record, t)
+  if (estado === 'pausa') pantallaPausa()
+  if (estado === 'fin') pantallaFin('TE CAÍSTE', puntos, puntos === 1 ? '1 tubo' : puntos + ' tubos', nuevoRecord, record, Date.now() > finEn, t)
+}
+
+function ciclo(ms) {
+  if (!ultimo) ultimo = ms
+  const dt = Math.min((ms - ultimo) / 16.67, 2)
+  ultimo = ms; t += dt
+  moverEstrellas(dt, estado === 'juego' ? 0.4 : 0.15)
+  if (estado === 'juego') { actualizar(dt); sueloX = (sueloX + vel * dt) % 24 }
+  if (sacudida > 0) sacudida = Math.max(0, sacudida - 0.7 * dt)
+  dibujar()
+  requestAnimationFrame(ciclo)
+}
+
+function tocar(pt) {
+  initAudio()
+  if ((estado === 'menu' || estado === 'fin') && pt && tocaVolver(pt)) return volver()
+  if (estado === 'menu') { reiniciar(); estado = 'juego'; aletear(); return }
+  if (estado === 'pausa') { estado = 'juego'; ultimo = 0; return }
+  if (estado === 'fin') { if (Date.now() > finEn) { reiniciar(); estado = 'juego'; aletear() } return }
+  aletear()
+}
+c.addEventListener('pointerdown', e => { e.preventDefault(); tocar(enLienzo(e)) })
+addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') { e.preventDefault(); tocar(null) }
+  if (e.code === 'KeyP' && estado === 'juego') estado = 'pausa'
+})
+document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'juego') estado = 'pausa' })
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>

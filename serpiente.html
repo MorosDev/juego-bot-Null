@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0712">
+<title>NULL · Serpiente</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0712; color: #e9e4f5;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #0f0a18; border: 1px solid #2a1f3d; border-radius: 12px; box-shadow: 0 0 40px rgba(139,92,246,.18); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script src="base.js"></script>
+<script>
+// NULL · Serpiente
+const CEL = 20, COLS = 18, FILAS = 28, OX = 0, OY = 52
+const sCome = () => tono(600, 900, 'sine', 0.06, 0.1)
+const sOro = () => { tono(700, 1100, 'sine', 0.06, 0.1); setTimeout(() => tono(1100, 1500, 'sine', 0.08, 0.1), 50) }
+const sFin = () => tono(220, 40, 'sawtooth', 0.4, 0.2)
+
+let estado = 'menu', t = 0, ultimo = 0, acum = 0, finEn = 0
+let cuerpo, dir, cola, comida, oro, puntos, record = leerRecord('serpiente'), paso, nuevoRecord, comidas
+
+function libre() {
+  for (let i = 0; i < 500; i++) {
+    const p = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * FILAS) }
+    if (!cuerpo.some(s => s.x === p.x && s.y === p.y) && !(comida && comida.x === p.x && comida.y === p.y)) return p
+  }
+  return { x: 0, y: 0 }
+}
+
+function reiniciar() {
+  cuerpo = [{ x: 9, y: 16 }, { x: 9, y: 17 }, { x: 9, y: 18 }]
+  dir = 'arriba'; cola = []; comida = null; comida = libre(); oro = null
+  puntos = 0; paso = 150; acum = 0; nuevoRecord = false; comidas = 0
+}
+reiniciar()
+
+const OPUESTO = { arriba: 'abajo', abajo: 'arriba', izq: 'der', der: 'izq' }
+alDeslizar(d => {
+  if (estado !== 'juego') return
+  const ult = cola.length ? cola[cola.length - 1] : dir
+  if (d !== ult && d !== OPUESTO[ult] && cola.length < 2) cola.push(d)
+})
+
+function terminar() {
+  estado = 'fin'; sFin()
+  if (puntos > record) { record = puntos; nuevoRecord = true; guardarRecord('serpiente', record) }
+  finEn = Date.now() + 700
+}
+
+function avanzar() {
+  if (cola.length) dir = cola.shift()
+  const c0 = cuerpo[0]
+  const n = { x: c0.x + (dir === 'der') - (dir === 'izq'), y: c0.y + (dir === 'abajo') - (dir === 'arriba') }
+  if (n.x < 0 || n.y < 0 || n.x >= COLS || n.y >= FILAS) return terminar()
+  const crece = n.x === comida.x && n.y === comida.y
+  const cuerpoSinCola = crece ? cuerpo : cuerpo.slice(0, -1)
+  if (cuerpoSinCola.some(s => s.x === n.x && s.y === n.y)) return terminar()
+  cuerpo.unshift(n)
+  if (crece) {
+    puntos += 10; comidas++; sCome(); comida = libre()
+    paso = Math.max(65, paso - 3)
+    if (!oro && comidas % 5 === 0) oro = { ...libre(), vida: 45 }
+  } else cuerpo.pop()
+  if (oro) {
+    if (n.x === oro.x && n.y === oro.y) { puntos += 50; sOro(); for (let i = 0; i < 2; i++) cuerpo.push({ ...cuerpo[cuerpo.length - 1] }); oro = null }
+    else if (--oro.vida <= 0) oro = null
+  }
+}
+
+function celda(cx, cy, col, m = 1) { x.fillStyle = col; x.fillRect(OX + cx * CEL + m, OY + cy * CEL + m, CEL - m * 2, CEL - m * 2) }
+
+function dibujar() {
+  x.clearRect(0, 0, W, H)
+  x.strokeStyle = '#2a1f3d'; x.lineWidth = 1.5
+  x.strokeRect(OX + 0.5, OY + 0.5, COLS * CEL - 1, FILAS * CEL - 1)
+  x.fillStyle = 'rgba(139,92,246,.06)'
+  for (let i = 0; i < COLS; i++) for (let j = 0; j < FILAS; j++) if ((i + j) % 2) x.fillRect(OX + i * CEL, OY + j * CEL, CEL, CEL)
+
+  const pulso = 1 + Math.sin(t * 0.2) * 1
+  x.fillStyle = ROJO; x.beginPath(); x.arc(OX + comida.x * CEL + CEL / 2, OY + comida.y * CEL + CEL / 2, 6 + pulso, 0, 7); x.fill()
+  if (oro && (oro.vida > 12 || Math.floor(t / 6) % 2)) {
+    x.fillStyle = ORO; x.beginPath(); x.arc(OX + oro.x * CEL + CEL / 2, OY + oro.y * CEL + CEL / 2, 7 + pulso, 0, 7); x.fill()
+  }
+  cuerpo.forEach((s, i) => celda(s.x, s.y, i === 0 ? '#ffffff' : (i % 2 ? MORADO : '#7c4ddb'), i === 0 ? 1 : 2))
+  const c0 = cuerpo[0]
+  x.fillStyle = '#0f0a18'
+  const ox = OX + c0.x * CEL + CEL / 2, oy = OY + c0.y * CEL + CEL / 2
+  const ojos = { arriba: [[-4, -3], [4, -3]], abajo: [[-4, 3], [4, 3]], izq: [[-3, -4], [-3, 4]], der: [[3, -4], [3, 4]] }[dir]
+  ojos.forEach(([a, b]) => x.fillRect(ox + a - 1.5, oy + b - 1.5, 3, 3))
+
+  if (estado !== 'menu') {
+    texto(String(puntos).padStart(4, '0'), 14, 34, 20, '#ffffff', '900', 'left')
+    texto('RÉCORD ' + String(record).padStart(4, '0'), W - 14, 32, 12, GRIS2, '700', 'right')
+  }
+  if (estado === 'menu') pantallaMenu('S E R P I E N T E', ['Desliza el dedo para girar', 'Come los puntos rojos (+10)', 'Los dorados valen +50 y se van', 'No choques con la pared ni contigo'], record, t)
+  if (estado === 'pausa') pantallaPausa()
+  if (estado === 'fin') pantallaFin('CHOCASTE', puntos, 'largo: ' + cuerpo.length, nuevoRecord, record, Date.now() > finEn, t)
+}
+
+function ciclo(ms) {
+  if (!ultimo) ultimo = ms
+  const d = Math.min(ms - ultimo, 100)
+  ultimo = ms; t += d / 16.67
+  if (estado === 'juego') { acum += d; while (acum >= paso && estado === 'juego') { acum -= paso; avanzar() } }
+  dibujar()
+  requestAnimationFrame(ciclo)
+}
+
+c.addEventListener('pointerdown', e => {
+  e.preventDefault(); initAudio()
+  const pt = enLienzo(e)
+  if ((estado === 'menu' || estado === 'fin') && tocaVolver(pt)) return volver()
+  if (estado === 'menu') { reiniciar(); estado = 'juego'; return }
+  if (estado === 'pausa') { estado = 'juego'; ultimo = 0; return }
+  if (estado === 'fin' && Date.now() > finEn) { reiniciar(); estado = 'juego' }
+})
+addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    initAudio()
+    if (estado === 'menu' || (estado === 'fin' && Date.now() > finEn)) { reiniciar(); estado = 'juego' }
+    else if (estado === 'pausa') { estado = 'juego'; ultimo = 0 }
+  }
+  if (e.code === 'KeyP' && estado === 'juego') estado = 'pausa'
+})
+document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'juego') estado = 'pausa' })
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>
