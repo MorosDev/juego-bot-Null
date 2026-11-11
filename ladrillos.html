@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0712">
+<title>NULL · Ladrillos</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0712; color: #e9e4f5;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #0f0a18; border: 1px solid #2a1f3d; border-radius: 12px; box-shadow: 0 0 40px rgba(139,92,246,.18); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script src="base.js"></script>
+<script>
+// NULL · Ladrillos
+const sRebote = () => tono(420, 380, 'square', 0.04, 0.04)
+const sRompe = () => tono(700 + Math.random() * 300, 300, 'triangle', 0.07, 0.07)
+const sVida = () => tono(300, 90, 'sawtooth', 0.3, 0.15)
+const sNivel = () => { tono(500, 800, 'sine', 0.1, 0.1); setTimeout(() => tono(800, 1200, 'sine', 0.12, 0.1), 90) }
+const COLS = 8, BW = 40, BH = 16, GAP = 4, BX = (W - (COLS * BW + (COLS - 1) * GAP)) / 2, BY = 90
+const COLORES = [ROJO, '#fb923c', ORO, VERDE, CIAN, MORADO, '#ec4899']
+
+let estado = 'menu', t = 0, ultimo = 0, finEn = 0
+let pala, bola, ladrillos, chispas, puntos, vidas, nivel, record = leerRecord('ladrillos'), nuevoRecord, pegada, arrastre = null
+
+function armarNivel() {
+  ladrillos = []
+  const filas = Math.min(4 + nivel, 9)
+  for (let f = 0; f < filas; f++) for (let k = 0; k < COLS; k++) {
+    const duro = nivel >= 2 && Math.random() < 0.08 * nivel
+    ladrillos.push({ x: BX + k * (BW + GAP), y: BY + f * (BH + GAP), vida: duro ? 2 : 1, col: COLORES[f % COLORES.length], pts: (filas - f) * 5 + 5 })
+  }
+}
+function ponerBola() {
+  bola = { x: pala.x, y: pala.y - 12, vx: 0, vy: 0, r: 6 }
+  pegada = true
+}
+function reiniciar() {
+  pala = { x: W / 2, y: H - 76, w: 74, h: 10, obj: W / 2 }
+  chispas = []; puntos = 0; vidas = 3; nivel = 1; nuevoRecord = false
+  armarNivel(); ponerBola()
+}
+reiniciar()
+
+function lanzar() {
+  if (!pegada) return
+  pegada = false
+  const v = 5.2 + nivel * 0.45
+  const ang = -Math.PI / 2 + (Math.random() - .5) * 0.6
+  bola.vx = Math.cos(ang) * v; bola.vy = Math.sin(ang) * v
+}
+
+function estallido(px, py, col) { for (let i = 0; i < 8; i++) chispas.push({ x: px, y: py, vx: (Math.random() - .5) * 4, vy: (Math.random() - .5) * 4, vida: 1, col }) }
+
+function terminar() {
+  estado = 'fin'
+  if (puntos > record) { record = puntos; nuevoRecord = true; guardarRecord('ladrillos', record) }
+  finEn = Date.now() + 700
+}
+
+function actualizar(dt) {
+  pala.x += (pala.obj - pala.x) * 0.5 * dt
+  pala.x = Math.max(pala.w / 2, Math.min(W - pala.w / 2, pala.x))
+  if (pegada) { bola.x = pala.x; bola.y = pala.y - 12; return }
+
+  const pasos = 3
+  for (let s = 0; s < pasos; s++) {
+    bola.x += bola.vx * dt / pasos; bola.y += bola.vy * dt / pasos
+    if (bola.x < bola.r) { bola.x = bola.r; bola.vx = Math.abs(bola.vx); sRebote() }
+    if (bola.x > W - bola.r) { bola.x = W - bola.r; bola.vx = -Math.abs(bola.vx); sRebote() }
+    if (bola.y < 50 + bola.r) { bola.y = 50 + bola.r; bola.vy = Math.abs(bola.vy); sRebote() }
+
+    if (bola.vy > 0 && bola.y + bola.r > pala.y - pala.h / 2 && bola.y < pala.y + pala.h && Math.abs(bola.x - pala.x) < pala.w / 2 + bola.r) {
+      const v = Math.hypot(bola.vx, bola.vy)
+      const rel = (bola.x - pala.x) / (pala.w / 2)
+      const ang = -Math.PI / 2 + Math.max(-1, Math.min(1, rel)) * 1.05
+      bola.vx = Math.cos(ang) * v; bola.vy = Math.sin(ang) * v
+      bola.y = pala.y - pala.h / 2 - bola.r
+      sRebote()
+    }
+
+    for (const l of ladrillos) {
+      if (l.vida <= 0) continue
+      if (bola.x + bola.r > l.x && bola.x - bola.r < l.x + BW && bola.y + bola.r > l.y && bola.y - bola.r < l.y + BH) {
+        const solX = Math.min(bola.x + bola.r - l.x, l.x + BW - (bola.x - bola.r))
+        const solY = Math.min(bola.y + bola.r - l.y, l.y + BH - (bola.y - bola.r))
+        if (solX < solY) bola.vx = -bola.vx; else bola.vy = -bola.vy
+        l.vida--
+        if (l.vida <= 0) { puntos += l.pts; sRompe(); estallido(l.x + BW / 2, l.y + BH / 2, l.col) }
+        else sRebote()
+        break
+      }
+    }
+  }
+
+  if (bola.y > H + 20) {
+    vidas--; sVida()
+    if (vidas <= 0) return terminar()
+    ponerBola()
+  }
+
+  if (!ladrillos.some(l => l.vida > 0)) {
+    nivel++; puntos += 100; sNivel()
+    pala.w = Math.max(52, pala.w - 4)
+    armarNivel(); ponerBola()
+  }
+}
+
+function dibujar() {
+  x.clearRect(0, 0, W, H)
+  dibujarEstrellas()
+  ladrillos.forEach(l => {
+    if (l.vida <= 0) return
+    x.fillStyle = l.col; x.fillRect(l.x, l.y, BW, BH)
+    if (l.vida > 1) { x.strokeStyle = '#ffffff'; x.lineWidth = 2; x.strokeRect(l.x + 2, l.y + 2, BW - 4, BH - 4) }
+  })
+  chispas.forEach(k => { x.globalAlpha = Math.max(k.vida, 0); x.fillStyle = k.col; x.fillRect(k.x, k.y, 3, 3) })
+  x.globalAlpha = 1
+  if (estado !== 'menu') {
+    x.fillStyle = '#ffffff'; x.fillRect(pala.x - pala.w / 2, pala.y - pala.h / 2, pala.w, pala.h)
+    x.fillStyle = MORADO; x.fillRect(pala.x - pala.w / 2, pala.y + pala.h / 2 - 3, pala.w, 3)
+    x.fillStyle = CIAN; x.beginPath(); x.arc(bola.x, bola.y, bola.r, 0, 7); x.fill()
+    texto(String(puntos).padStart(5, '0'), 14, 34, 20, '#ffffff', '900', 'left')
+    texto('NIVEL ' + nivel, W / 2, 32, 12, GRIS, '700')
+    texto('♥'.repeat(Math.max(vidas, 0)), W - 14, 33, 16, ROJO, '700', 'right')
+    if (estado === 'juego' && pegada) texto('Toca para lanzar', W / 2, pala.y + 40, 13, GRIS, '400')
+  }
+  if (estado === 'menu') pantallaMenu('L A D R I L L O S', ['Arrastra el dedo para mover la barra', 'Toca para lanzar la bola', 'Rompe todos para subir de nivel', 'Los de borde blanco aguantan 2'], record, t)
+  if (estado === 'pausa') pantallaPausa()
+  if (estado === 'fin') pantallaFin('SIN VIDAS', puntos, 'llegaste al nivel ' + nivel, nuevoRecord, record, Date.now() > finEn, t)
+}
+
+function ciclo(ms) {
+  if (!ultimo) ultimo = ms
+  const dt = Math.min((ms - ultimo) / 16.67, 2)
+  ultimo = ms; t += dt
+  moverEstrellas(dt, 0.2)
+  if (estado === 'juego') actualizar(dt)
+  chispas.forEach(k => { k.x += k.vx * dt; k.y += k.vy * dt; k.vida -= 0.04 * dt })
+  chispas = chispas.filter(k => k.vida > 0)
+  dibujar()
+  requestAnimationFrame(ciclo)
+}
+
+c.addEventListener('pointerdown', e => {
+  e.preventDefault(); initAudio()
+  const pt = enLienzo(e)
+  if ((estado === 'menu' || estado === 'fin') && tocaVolver(pt)) return volver()
+  if (estado === 'menu') { reiniciar(); estado = 'juego'; return }
+  if (estado === 'pausa') { estado = 'juego'; ultimo = 0; return }
+  if (estado === 'fin') { if (Date.now() > finEn) { reiniciar(); estado = 'juego' } return }
+  arrastre = { x0: e.clientX, obj0: pala.obj, movio: false }
+  try { c.setPointerCapture(e.pointerId) } catch (er) {}
+})
+c.addEventListener('pointermove', e => {
+  if (!arrastre || estado !== 'juego') return
+  const escala = W / c.getBoundingClientRect().width
+  const dx = (e.clientX - arrastre.x0) * escala
+  if (Math.abs(dx) > 6) arrastre.movio = true
+  pala.obj = Math.max(pala.w / 2, Math.min(W - pala.w / 2, arrastre.obj0 + dx * 1.3))
+})
+c.addEventListener('pointerup', () => { if (arrastre && !arrastre.movio && estado === 'juego') lanzar(); arrastre = null })
+c.addEventListener('pointercancel', () => { arrastre = null })
+addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') pala.obj = Math.max(pala.w / 2, pala.obj - 30)
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') pala.obj = Math.min(W - pala.w / 2, pala.obj + 30)
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault(); initAudio()
+    if (estado === 'menu' || (estado === 'fin' && Date.now() > finEn)) { reiniciar(); estado = 'juego' }
+    else if (estado === 'pausa') { estado = 'juego'; ultimo = 0 }
+    else lanzar()
+  }
+  if (e.code === 'KeyP' && estado === 'juego') estado = 'pausa'
+})
+document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'juego') estado = 'pausa' })
+requestAnimationFrame(ciclo)
+</script>
+</body>
+</html>
