@@ -109,7 +109,8 @@ function pantallaFin(titulo, puntos, extra, nuevo, rec, listo, t) {
   if (extra) texto(extra, W / 2, 322, 13, GRIS, '400')
   if (nuevo) texto('¡NUEVO RÉCORD!', W / 2, 365, 16, ORO, '900')
   else texto('Récord: ' + Math.floor(rec), W / 2, 365, 13, GRIS2, '700')
-  if (listo && Math.floor(t / 30) % 2 === 0) texto('TOCA PARA REINTENTAR', W / 2, 450, 15, '#ffffff', '900')
+  const conCodigo = dibujarCodigo(puntos)
+  if (listo && Math.floor(t / 30) % 2 === 0) texto('TOCA PARA REINTENTAR', W / 2, conCodigo ? 505 : 450, 15, '#ffffff', '900')
   dibujarVolver()
 }
 function pantallaPausa() {
@@ -136,6 +137,40 @@ function alDeslizar(fn) {
   })
 }
 
+// ===== Código para cobrar en Null =====
+let boleto = ''
+try { boleto = (new URLSearchParams(location.search).get('t') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) } catch (e) {}
+const LETRA = { nave: 'N', serpiente: 'S', aleteo: 'A', ladrillos: 'L', '2048': 'D' }
+let mejorSesion = 0, copiadoHasta = 0
+function huella(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h >>> 0 }
+function firma(tk, j, p) { return huella('null-arcade-v1|' + tk + '|' + j + '|' + p).toString(36).toUpperCase().padStart(7, '0').slice(-5) }
+function codigoDe(p) { const j = LETRA[JUEGO]; return j + '-' + p + '-' + firma(boleto, j, p) }
+const CAJA = { x: W / 2 - 130, y: 392, w: 260, h: 64 }
+function tocaCodigo(p) { return !!boleto && p.x > CAJA.x && p.x < CAJA.x + CAJA.w && p.y > CAJA.y && p.y < CAJA.y + CAJA.h }
+function copiarCodigo() {
+  const txt = '.arcade cobrar ' + codigoDe(mejorSesion)
+  const ok = () => { copiadoHasta = Date.now() + 1800 }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, () => { respaldoCopia(txt); ok() })
+    else { respaldoCopia(txt); ok() }
+  } catch (e) { respaldoCopia(txt); ok() }
+  return true
+}
+function respaldoCopia(txt) {
+  try { const a = document.createElement('textarea'); a.value = txt; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove() } catch (e) {}
+}
+function dibujarCodigo(puntos) {
+  if (!boleto) return false
+  mejorSesion = Math.max(mejorSesion, Math.floor(puntos))
+  x.fillStyle = '#1a1129'; x.strokeStyle = MORADO; x.lineWidth = 1.5
+  x.beginPath(); x.roundRect ? x.roundRect(CAJA.x, CAJA.y, CAJA.w, CAJA.h, 10) : x.rect(CAJA.x, CAJA.y, CAJA.w, CAJA.h); x.fill(); x.stroke()
+  texto('CÓDIGO PARA NULL · mejor: ' + mejorSesion, W / 2, CAJA.y + 17, 10, GRIS2, '700')
+  texto(codigoDe(mejorSesion), W / 2, CAJA.y + 40, 18, '#ffffff', '900')
+  texto(Date.now() < copiadoHasta ? '¡Copiado! Pégalo en WhatsApp' : 'toca aquí para copiar', W / 2, CAJA.y + 57, 10, Date.now() < copiadoHasta ? VERDE : CIAN, '700')
+  return true
+}
+
+const JUEGO = 'nave'
 // NULL · Nave — basado en "Striker" de neoxr-bot (MIT, (c) 2022 Neoxr Creative)
 const sDisparo = () => tono(850, 300, 'square', 0.04, 0.03)
 const sGolpe = () => tono(300, 80, 'sawtooth', 0.08, 0.07)
@@ -328,6 +363,7 @@ function ciclo(ms) {
 
 function tocar(pt) {
   initAudio()
+  if (estado === 'fin' && pt && tocaCodigo(pt)) return copiarCodigo()
   if ((estado === 'menu' || estado === 'fin') && pt && tocaVolver(pt)) { volver(); return true }
   if (estado === 'menu') { reiniciar(); estado = 'juego'; return true }
   if (estado === 'pausa') { estado = 'juego'; ultimo = 0; return true }
