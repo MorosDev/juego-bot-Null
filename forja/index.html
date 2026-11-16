@@ -167,8 +167,18 @@ button.fabrica:hover { color: var(--texto); }
             <option value="ascii">ASCII clásico</option>
             <option value="detalle">ASCII con mucho detalle</option>
             <option value="braille">Braille ⣿</option>
+            <optgroup label="Por forma (estilo scene de los 90)">
+              <option value="forma">ASCII scene $il:" (la letra sigue la forma)</option>
+              <option value="formaTodo">ASCII con todas las letras (sigue la forma)</option>
+              <option value="trazos">Trazos / \ | _ (solo los contornos)</option>
+              <option value="cuadros">Cuadritos ▙▟▚░ (pixel art)</option>
+            </optgroup>
           </select>
         </label>
+        <label id="filaDetalle" hidden>Detalle <span class="valor" id="v-detalle"></span>
+          <input type="range" id="detalle" min="0" max="100" value="50">
+        </label>
+        <div class="medidas" id="notaForma" hidden>Los modos "por forma" escogen cada letra por cómo se ve, no solo por qué tan oscura es: una orilla inclinada sale con / o ", un poste con l o |. Funcionan mejor con fotos de mucho contraste y fondo oscuro, y a 80 columnas o más.</div>
         <div class="dos">
           <label>Brillo <span class="valor" id="v-brillo"></span><input type="range" id="brillo" min="-60" max="60" value="0"></label>
           <label>Contraste <span class="valor" id="v-contraste"></span><input type="range" id="contraste" min="-50" max="100" value="15"></label>
@@ -355,7 +365,7 @@ function leerOpciones() {
   return {
     modo, texto: s("texto"), fuente: s("fuente"), ancho: n("ancho"), estirar: n("estirar"), juego: s("juego"), relleno: s("relleno"),
     sombra: b("sombra"), contorno: b("contorno"), anchoImg: n("anchoImg"), modoImg: s("modoImg"), brillo: n("brillo"),
-    contraste: n("contraste"), invertir: b("invertir"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
+    contraste: n("contraste"), invertir: b("invertir"), detalle: n("detalle"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
     mAncho: n("mAncho"), mBorde: s("mBorde"), mLogo: b("mLogo"), pintura: s("pintura"), c1: hex(s("c1")), c2: hex(s("c2")),
     nNombre: nombreCmd(), nTitulo: s("nTitulo"), nOps: s("nOps"), nAncho: n("nAncho"), nBorde: s("nBorde"),
     nLogoEstilo: s("nLogoEstilo"), nFuente: s("nFuente"), nAlto: n("nAlto"), nPie: s("nPie"), nEstado: b("nEstado"), anim: s("anim"),
@@ -617,6 +627,97 @@ function lunaDeEjemplo() {
   return c;
 }
 
+// ── ASCII "POR FORMA" (como los NFO de la scene) ──
+// Los modos normales escogen la letra solo por qué tan oscura es la celda. Aquí cada celda se parte
+// en 4×8 cuadritos y se compara con el DIBUJO de cada letra (su "molde"): gana la que más se parece.
+// Así una orilla inclinada sale con / o ", un poste con l o |, y una zona llena con $ o M,
+// que es lo que hacían a mano los artistas de los 90.
+const SX = 4, SY = 8; // cuadritos por celda (la celda mide el doble de alto que de ancho)
+const JUEGOS_FORMA = {
+  forma: " .,:;'`\"_-~^!il1|IT7YLJ$SMyaw%/\\()",
+  formaTodo: Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join(""),
+  trazos: " ._-'`,|/\\()<>:;^~=",
+  cuadros: " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█░▒▓",
+};
+// Los cuadritos ▘▝▖▗ se arman a mano (cada uno llena un cuarto), así no dependen de la letra
+const CUARTOS = { "▘": "1000", "▝": "0100", "▖": "0010", "▗": "0001", "▀": "1100", "▄": "0011", "▌": "1010", "▐": "0101",
+  "▞": "0110", "▚": "1001", "▛": "1110", "▜": "1101", "▙": "1011", "▟": "0111", "█": "1111", " ": "0000" };
+const SOMBRAS = { "░": 0.25, "▒": 0.5, "▓": 0.75 };
+const moldesHechos = {};
+function moldes(juego) {
+  if (moldesHechos[juego]) return moldesHechos[juego];
+  const letras = [...JUEGOS_FORMA[juego]];
+  let lista;
+  if (juego === "cuadros") {
+    lista = letras.map((ch) => {
+      const m = new Float32Array(SX * SY);
+      for (let y = 0; y < SY; y++) for (let x = 0; x < SX; x++) {
+        m[y * SX + x] = ch in SOMBRAS ? SOMBRAS[ch] : Number(CUARTOS[ch][(y < SY / 2 ? 0 : 2) + (x < SX / 2 ? 0 : 1)]);
+      }
+      return { ch, m };
+    });
+  } else {
+    // Cada letra se dibuja en blanco sobre negro del tamaño de una celda (24×48) y se promedia a 4×8
+    const F = 40, W = 24, H = 48, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    lista = letras.map((ch) => {
+      x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
+      x.fillStyle = "#fff"; x.font = `${F}px "Noto Sans Mono"`; x.textAlign = "center"; x.textBaseline = "middle";
+      x.fillText(ch, W / 2, H / 2 + F * 0.04);
+      const d = x.getImageData(0, 0, W, H).data, m = new Float32Array(SX * SY), area = (W / SX) * (H / SY);
+      for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+        m[((py * SY / H) | 0) * SX + ((px * SX / W) | 0)] += d[(py * W + px) * 4] / 255 / area;
+      }
+      return { ch, m };
+    });
+    // Que el cuadrito más lleno de todas las letras valga 1 (una letra nunca llena su celda como un █)
+    const mx = Math.max(...lista.map((l) => Math.max(...l.m))) || 1;
+    lista.forEach((l) => l.m.forEach((v, i) => (l.m[i] = v / mx)));
+  }
+  return (moldesHechos[juego] = lista);
+}
+// La letra cuyo molde se parece más al pedazo p (suma de diferencias al cuadrado; se corta si ya perdió)
+function letraParecida(p, lista) {
+  let mejor = " ", menor = Infinity;
+  for (const { ch, m } of lista) {
+    let d = 0;
+    for (let i = 0; i < p.length && d < menor; i++) { const e = p[i] - m[i]; d += e * e; }
+    if (d < menor) { menor = d; mejor = ch; }
+  }
+  return mejor;
+}
+// Prepara la luz de cada cuadrito: en "trazos" se quedan solo las orillas (filtro Sobel: cuánto cambia
+// la luz de un cuadrito a su vecino); en los demás se marcan las orillas para que se lean más (unsharp)
+function luzPorForma(L, gw, gh, o) {
+  const at = (x, y) => L[Math.min(gh - 1, Math.max(0, y)) * gw + Math.min(gw - 1, Math.max(0, x))];
+  const out = new Float32Array(L.length), k = o.detalle / 100;
+  if (o.modoImg === "trazos") {
+    const bruto = new Float32Array(L.length), dir = new Float32Array(L.length), mag = new Float32Array(L.length);
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+      const gx = at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1);
+      const gy = at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1);
+      bruto[y * gw + x] = Math.hypot(gx, gy); dir[y * gw + x] = Math.atan2(gy, gx);
+    }
+    // Adelgazar: un cuadrito se queda solo si es la orilla más fuerte de su "cruce" (como el lápiz que sigue
+    // el borde una vez, y no lo rellena). Sin esto, una sombra suave salía como |||||
+    const B = (x, y) => bruto[Math.min(gh - 1, Math.max(0, y)) * gw + Math.min(gw - 1, Math.max(0, x))];
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+      const i = y * gw + x, dx = Math.round(Math.cos(dir[i])), dy = Math.round(Math.sin(dir[i]));
+      mag[i] = bruto[i] >= B(x + dx, y + dy) && bruto[i] >= B(x - dx, y - dy) ? bruto[i] : 0;
+    }
+    // Se toma como "orilla fuerte" lo que está en el 2% más alto (medido antes de adelgazar), para que funcione igual con fotos claras u oscuras
+    const orden = Float32Array.from(bruto).sort(), tope = orden[Math.floor(orden.length * 0.98)] || 1;
+    const umbral = 0.6 - k * 0.5; // más detalle = se cuentan orillas más suaves
+    for (let i = 0; i < mag.length; i++) out[i] = clamp((mag[i] / tope - umbral) / (1 - umbral));
+  } else {
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+      let s = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += at(x + dx, y + dy);
+      const v = at(x, y); out[y * gw + x] = clamp(v + k * 2.5 * (v - s / 9));
+    }
+  }
+  return out;
+}
+
 function celdasImagen(o) {
   const src = imagen || (imagen = lunaDeEjemplo());
   const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
@@ -629,8 +730,9 @@ function celdasImagen(o) {
   const P = promediar(c, cols * 2, filas * 4);
   const ajustar = (v) => { let t = (v / 255 - 0.5) * (1 + o.contraste / 100) + 0.5 + o.brillo / 100; t = clamp(t); return o.invertir ? 1 - t : t; };
   const luz = (r, g, b) => (0.2126 * r + 0.7152 * g + 0.0722 * b);
-  const colorDe = (rgb, f, c) => {
-    const l = ajustar(luz(...rgb));
+  // lx: luz forzada (en los modos por forma la letra ya dibuja el tono; el color no debe oscurecer de más)
+  const colorDe = (rgb, f, c, lx) => {
+    const l = lx ?? ajustar(luz(...rgb));
     if (o.pintura === "ninguno") return null;
     if (o.pintura === "original") { const k = l / Math.max(0.04, luz(...rgb) / 255); return rgb.map((v) => clamp(Math.round(v * k), 0, 255)); }
     let base = o.c1;
@@ -641,12 +743,26 @@ function celdasImagen(o) {
   };
   const prom = (idx) => ["R", "G", "B"].map((k) => idx.reduce((s, i) => s + P[k][i], 0) / idx.length);
   const RAMPA = { bloques: " ░▒▓█", ascii: " .:-=+*#%@", detalle: " .'`^\",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$" };
-  const out = [];
+  // Modos por forma: una rejilla más fina (4×8 por celda) con la luz ya ajustada
+  const porForma = o.modoImg in JUEGOS_FORMA;
+  let LF = null, lista = null;
+  if (porForma) {
+    const Q = promediar(c, cols * SX, filas * SY), L = new Float32Array(Q.R.length);
+    for (let i = 0; i < L.length; i++) L[i] = ajustar(luz(Q.R[i], Q.G[i], Q.B[i]));
+    LF = luzPorForma(L, cols * SX, filas * SY, o); lista = moldes(o.modoImg);
+  }
+  const out = [], pedazo = new Float32Array(SX * SY);
   for (let f = 0; f < filas; f++) {
     const fila = [];
     for (let c = 0; c < cols; c++) {
       const ids = []; for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 2; sx++) ids.push((f * 4 + sy) * P.gw + c * 2 + sx);
-      if (o.modoImg === "medio") {
+      if (porForma) {
+        for (let sy = 0; sy < SY; sy++) for (let sx = 0; sx < SX; sx++) pedazo[sy * SX + sx] = LF[(f * SY + sy) * cols * SX + c * SX + sx];
+        const ch = letraParecida(pedazo, lista);
+        if (ch === " ") { fila.push({ ch, fg: null }); continue; }
+        const rgb = prom(ids), l = ajustar(luz(...rgb));
+        fila.push({ ch, fg: colorDe(rgb, f, c, o.modoImg === "trazos" ? 0.9 : 0.45 + 0.55 * l) });
+      } else if (o.modoImg === "medio") {
         // ▀ con el color de arriba como letra y el de abajo como fondo: el doble de detalle vertical
         const arriba = prom(ids.slice(0, 4)), abajo = prom(ids.slice(4));
         const fg = colorDe(arriba, f, c) || [Math.round(ajustar(luz(...arriba)) * 255)].flatMap((v) => [v, v, v]);
@@ -1012,6 +1128,9 @@ function actualizarValores() {
   $("v-anchoImg").textContent = $("anchoImg").value + " col";
   $("v-brillo").textContent = $("brillo").value;
   $("v-contraste").textContent = $("contraste").value;
+  $("v-detalle").textContent = $("detalle").value;
+  const porForma = $("modoImg").value in JUEGOS_FORMA;
+  $("filaDetalle").hidden = $("notaForma").hidden = !porForma;
   $("v-mAncho").textContent = $("mAncho").value + " col";
   $("v-nAncho").textContent = $("nAncho").value + " col";
   $("v-nAlto").textContent = $("nAlto").value + "%";
@@ -1030,6 +1149,8 @@ async function dibujar() {
   if (modo !== "imagen" && o.pintura === "original") o.pintura = "gris"; // "colores de la foto" solo existe en Imagen
   try {
     await document.fonts.load(`${PESO[o.fuente] || "400"} 100px "${o.fuente}"`, o.texto || "A");
+    // Los modos "por forma" necesitan la letra de la vista previa ya cargada para dibujar los moldes
+    if (modo === "imagen" && o.modoImg in JUEGOS_FORMA) await document.fonts.load('40px "Noto Sans Mono"', "$il/\\");
     if (modo === "menu" && o.nFuente) await document.fonts.load(`${PESO[o.nFuente] || "400"} 100px "${o.nFuente}"`, o.texto || "A");
   } catch {}
   ultimo = modo === "logo" ? celdasLogo(o) : modo === "imagen" ? celdasImagen(o) : modo === "menu" ? celdasMenu(o) : celdasMarco(o);
