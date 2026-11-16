@@ -52,7 +52,8 @@ header { display: grid; gap: 6px; min-width: 0; }
 
 .controles { background: var(--panel); border: 1px solid var(--raya); border-radius: 6px; padding: 16px; display: grid; gap: 14px; }
 .grupo { display: grid; gap: 10px; }
-.grupo + .grupo { border-top: 1px dashed var(--raya); padding-top: 14px; }
+/* raya solo entre grupos visibles (los de otras pestañas están ocultos) */
+.grupo:not([hidden]) ~ .grupo { border-top: 1px dashed var(--raya); padding-top: 14px; }
 .titulo-grupo { font: 600 11px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--acento); }
 label { display: grid; gap: 5px; font-size: 13px; color: var(--tenue); }
 label.fila { grid-template-columns: auto 1fr; align-items: center; gap: 8px; color: var(--texto); }
@@ -87,6 +88,8 @@ details.guia summary { cursor: pointer; font: 600 13px var(--f-mono); letter-spa
 details.guia ol { margin: 10px 0 4px; padding-left: 20px; display: grid; gap: 8px; max-width: 72ch; }
 code, kbd { font: 13px var(--f-mono); background: var(--bg); border: 1px solid var(--raya); border-radius: 3px; padding: 1px 5px; color: var(--acento2); overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
+button.fabrica { justify-self: start; background: none; border: 0; padding: 2px 0; color: var(--tenue); font: 12px var(--f-mono); text-decoration: underline; cursor: pointer; }
+button.fabrica:hover { color: var(--texto); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -102,6 +105,7 @@ code, kbd { font: 13px var(--f-mono); background: var(--bg); border: 1px solid v
     <button role="tab" id="tab-logo" aria-selected="true" data-modo="logo">Logo</button>
     <button role="tab" id="tab-imagen" aria-selected="false" data-modo="imagen">Imagen</button>
     <button role="tab" id="tab-marco" aria-selected="false" data-modo="marco">Marco NFO</button>
+    <button role="tab" id="tab-menu" aria-selected="false" data-modo="menu">Menú</button>
   </nav>
 
   <div class="taller">
@@ -196,6 +200,47 @@ Lo que nadie guardó, aquí se queda.</textarea>
         <label class="fila"><input type="checkbox" id="mLogo" checked> Poner el logo arriba</label>
       </div>
 
+      <!-- ── MENÚ DE TERMINAL ── -->
+      <div data-panel="menu" class="grupo" hidden>
+        <div class="titulo-grupo">menú de terminal</div>
+        <label>Se abre escribiendo <input type="text" id="nNombre" value="null" maxlength="20" spellcheck="false"></label>
+        <label>Título <input type="text" id="nTitulo" value="NULL · PANEL"></label>
+        <label>Opciones <small>(una por renglón: Nombre | comando · máx. 9 · el 0 siempre es Salir)</small>
+          <textarea id="nOps" rows="7" spellcheck="false">Prender Null | cd ~/null2 && sh iniciar.sh
+Prender (forzar) | cd ~/null2 && sh iniciar.sh forzar
+Apagar Null | pkill -INT -f "node index.js" && echo "Apagando… espera a que diga Datos subidos" || echo "Null no estaba prendido"
+Actualizar | cd ~/null2 && git pull && npm install --no-audit --no-fund --silent
+Ver errores | tail -n 40 ~/null2/datos/errores.log 2>/dev/null || echo "Sin errores guardados"
+Respaldo a Descargas | pgrep -f "node index.js" >/dev/null && echo "Apaga Null primero" || { cp ~/null2/datos/null.db ~/storage/downloads/null-$(date +%F).db && echo "Listo: null-$(date +%F).db en Descargas"; }</textarea>
+        </label>
+        <div class="dos">
+          <label>Ancho <span class="valor" id="v-nAncho"></span><input type="range" id="nAncho" min="30" max="90" value="44"></label>
+          <label>Borde
+            <select id="nBorde">
+              <option value="redondo">Redondo ╭</option>
+              <option value="doble">Doble ═</option>
+              <option value="simple">Simple ─</option>
+              <option value="grueso">Grueso ━</option>
+            </select>
+          </label>
+        </div>
+        <label class="fila"><input type="checkbox" id="nLogo" checked> Logo arriba (el de la pestaña Logo)</label>
+        <label class="fila"><input type="checkbox" id="nEstado" checked> Decir si Null está prendido</label>
+      </div>
+
+      <!-- ── ANIMACIÓN (todos) ── -->
+      <div class="grupo">
+        <div class="titulo-grupo">al abrir</div>
+        <label>Animación del banner
+          <select id="anim">
+            <option value="ninguna">Ninguna (sale de golpe)</option>
+            <option value="renglones">Renglón por renglón</option>
+            <option value="aparecer">Se enciende poco a poco</option>
+            <option value="glitch">Glitch (señal rota)</option>
+          </select>
+        </label>
+      </div>
+
       <!-- ── COLOR (todos) ── -->
       <div class="grupo">
         <div class="titulo-grupo">color</div>
@@ -214,6 +259,7 @@ Lo que nadie guardó, aquí se queda.</textarea>
           <label>Color 2 <input type="color" id="c2" value="#e05aa8"></label>
         </div>
       </div>
+      <button type="button" class="fabrica" id="fabrica">Volver a lo de fábrica</button>
     </form>
 
     <section class="salida">
@@ -222,6 +268,7 @@ Lo que nadie guardó, aquí se queda.</textarea>
         <button type="button" class="accion sec" id="copiarTexto">Copiar texto</button>
         <button type="button" class="accion sec" id="copiarWa">Copiar para WhatsApp</button>
         <button type="button" class="accion sec" id="descargar">Descargar banner.sh</button>
+        <button type="button" class="accion sec" id="probar">▶ Ver animación</button>
         <div class="zoom"><span>zoom</span><input type="range" id="zoom" min="4" max="22" value="11" aria-label="Zoom"></div>
       </div>
       <div class="lienzo"><pre id="arte"></pre></div>
@@ -229,7 +276,7 @@ Lo que nadie guardó, aquí se queda.</textarea>
       <div class="aviso" id="aviso" role="status"></div>
       <textarea id="respaldo" hidden aria-label="Texto para copiar a mano"></textarea>
 
-      <details class="guia" open>
+      <details class="guia" open data-guia="banner">
         <summary>Ponerlo al abrir Termux (o la terminal de tu laptop)</summary>
         <ol>
           <li>Toca <b>Copiar para Termux</b>. Copia un script con los colores ya puestos.</li>
@@ -238,6 +285,17 @@ Lo que nadie guardó, aquí se queda.</textarea>
           <li>Para quitar el saludo de Termux que sale arriba: <code>touch ~/.hushlogin</code></li>
           <li>Pruébalo sin cerrar: <code>bash ~/.banner.sh</code>. Si se ve cortado, baja el ancho aquí: Termux en vertical cabe ~45 columnas; en horizontal o en la laptop, 80 o más.</li>
           <li>En la laptop (Linux o Mac) es igual, en <code>~/.bashrc</code> o <code>~/.zshrc</code>.</li>
+        </ol>
+      </details>
+      <details class="guia" open data-guia="menu" hidden>
+        <summary>Instalar el menú en Termux</summary>
+        <ol>
+          <li>Toca <b>Descargar <span class="nombreCmd">null</span></b>. Queda en Descargas.</li>
+          <li>En Termux (una sola vez): <code>termux-setup-storage</code></li>
+          <li>Ponlo como comando: <code>cp ~/storage/downloads/<span class="nombreCmd">null</span>.sh $PREFIX/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x $PREFIX/bin/<span class="nombreCmd">null</span></code></li>
+          <li>Ábrelo escribiendo <code class="nombreCmd">null</code>. Eliges con el número y <kbd>Enter</kbd>; <kbd>0</kbd> sale. <kbd>Ctrl</kbd>+<kbd>C</kbd> detiene lo que esté corriendo (por ejemplo Null) y te regresa al menú.</li>
+          <li>Que salga solo al abrir Termux: <code>echo <span class="nombreCmd">null</span> &gt;&gt; ~/.bashrc</code> (y <code>touch ~/.hushlogin</code> para quitar el saludo).</li>
+          <li>En la laptop: <code>mkdir -p ~/.local/bin &amp;&amp; cp ~/Descargas/<span class="nombreCmd">null</span>.sh ~/.local/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x ~/.local/bin/<span class="nombreCmd">null</span></code>. "Respaldo a Descargas" usa la carpeta de Termux: cámbialo ahí.</li>
         </ol>
       </details>
     </section>
@@ -278,8 +336,13 @@ function leerOpciones() {
     sombra: b("sombra"), contorno: b("contorno"), anchoImg: n("anchoImg"), modoImg: s("modoImg"), brillo: n("brillo"),
     contraste: n("contraste"), invertir: b("invertir"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
     mAncho: n("mAncho"), mBorde: s("mBorde"), mLogo: b("mLogo"), pintura: s("pintura"), c1: hex(s("c1")), c2: hex(s("c2")),
+    nNombre: nombreCmd(), nTitulo: s("nTitulo"), nOps: s("nOps"), nAncho: n("nAncho"), nBorde: s("nBorde"),
+    nLogo: b("nLogo"), nEstado: b("nEstado"), anim: s("anim"),
   };
 }
+
+// El nombre del comando del menú: solo letras, números, - y _ (es un archivo en $PREFIX/bin)
+const nombreCmd = () => ($("nNombre").value.trim().replace(/[^\w-]/g, "") || "null").slice(0, 20);
 
 // ── Del lienzo a una rejilla: cada celda se parte en 2×4 sub-celdas (lo que usa el braille) ──
 function promediar(c, gw, gh) {
@@ -534,9 +597,18 @@ function celdasMarco(o) {
   const izq = Math.floor((W - 2 - pie.length) / 2);
   linea([[B.c + B.h.repeat(izq), "borde"], [pie, "pie"], [B.h.repeat(W - 2 - izq - pie.length) + B.d, "borde"]]);
 
-  // Colores: texto con el color 1, campos con el 2, el borde sigue la pintura
+  const out = colorear(filas, o, W);
+  if (!o.mLogo) return out;
+  // El logo de la pestaña Logo, del mismo ancho que el marco, encima
+  const logo = celdasLogo({ ...o, pintura: o.pintura === "original" ? "gris" : o.pintura }, W);
+  return [...logo, [], ...out];
+}
+
+// Colores de una ficha armada con pedazos [texto, rol]: texto con el color 1, campos y números
+// con el 2, y el borde sigue la pintura (lo usan el marco NFO y el menú)
+function colorear(filas, o, W) {
   const cuantas = filas.length;
-  const out = filas.map((partes, f) => {
+  return filas.map((partes, f) => {
     const fila = []; let c = 0;
     for (const [t, rol] of partes) for (const ch of t) {
       let fg = null;
@@ -553,10 +625,77 @@ function celdasMarco(o) {
     }
     return fila;
   });
-  if (!o.mLogo) return out;
-  // El logo de la pestaña Logo, del mismo ancho que el marco, encima
-  const logo = celdasLogo({ ...o, pintura: o.pintura === "original" ? "gris" : o.pintura }, W);
-  return [...logo, [], ...out];
+}
+
+// ── MENÚ DE TERMINAL ──
+// Las opciones salen de renglones "Nombre | comando"; el número se pone solo (1-9, el 0 es Salir)
+function opcionesMenu(o) {
+  return o.nOps.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && l.includes("|"))
+    .map((l) => { const i = l.indexOf("|"); return { nombre: l.slice(0, i).trim(), cmd: l.slice(i + 1).trim().replace(/;;/g, ";") }; })
+    .filter((x) => x.nombre && x.cmd).slice(0, 9);
+}
+function cajaMenu(o) {
+  const B = BORDES[o.nBorde], W = o.nAncho, dentro = W - 4, ops = opcionesMenu(o);
+  const filas = [];
+  // Título metido en el borde de arriba:  ╭──── NULL · PANEL ────╮
+  const t = o.nTitulo.trim() ? ` ${o.nTitulo.trim().slice(0, W - 8)} ` : "";
+  const izq = Math.floor((W - 2 - t.length) / 2);
+  filas.push([[B.a + B.h.repeat(izq), "borde"], [t, "titulo"], [B.h.repeat(W - 2 - izq - t.length) + B.b, "borde"]]);
+  const opcion = (num, nombre) => filas.push([[B.v + " ", "borde"], [` ${num}  `, "campo"], [nombre.slice(0, dentro - 4).padEnd(dentro - 4), "texto"], [" " + B.v, "borde"]]);
+  if (!ops.length) opcion(" ", "(escribe opciones a la izquierda)");
+  ops.forEach((x, i) => opcion(String(i + 1), x.nombre));
+  filas.push([[B.ml + B.h.repeat(W - 2) + B.mr, "borde"]]);
+  opcion("0", "Salir");
+  filas.push([[B.c + B.h.repeat(W - 2) + B.d, "borde"]]);
+  return colorear(filas, o, W);
+}
+const PRENDIDO = [126, 224, 150], APAGADO = [141, 135, 152];
+function bannerMenu(o) {
+  if (!o.nLogo) return [];
+  return celdasLogo({ ...o, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho);
+}
+// Lo que se ve en la página: banner, estado de ejemplo, la caja y el renglón donde se escribe
+function celdasMenu(o) {
+  const linea = (t, fg) => [...t].map((ch) => ({ ch, fg }));
+  const banner = bannerMenu(o);
+  return [
+    ...banner, ...(banner.length ? [[]] : []),
+    ...(o.nEstado ? [linea("  ● Null prendido", PRENDIDO)] : []),
+    ...cajaMenu(o),
+    linea("  elige › ", o.pintura === "ninguno" ? null : o.c2),
+  ];
+}
+
+// ── ANIMACIÓN ──
+// Un mismo juego de cuadros sirve para verla en la página y para escribir el script
+function azar(semilla) { let s = semilla >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32); }
+const GRIS = [201, 197, 207];
+function cuadros(L, anim) {
+  if (anim === "renglones") return L.map((_, i) => ({ L: L.slice(0, i + 1), ms: 35 }));
+  if (anim === "aparecer") {
+    // Cada cuadro tiene los colores más apagados; a lo que no tiene color se le da gris para que también se encienda
+    const tenue = (c, t) => (c ? c.map((v) => Math.round(v * t)) : null);
+    return [0.1, 0.25, 0.45, 0.65, 0.85].map((t) => ({
+      ms: 70, L: L.map((f) => f.map((c) => ({ ch: c.ch, fg: tenue(c.fg || (c.ch.trim() ? GRIS : null), t), bg: tenue(c.bg, t) }))),
+    }));
+  }
+  if (anim === "glitch") {
+    // Señal rota: unos renglones se corren de lado y algunas letras cambian a ruido cian o magenta
+    const r = azar(L.length * 7919 + (L[0]?.length || 0)), RUIDO = "░▒▓█▀▄▌▐/|#=", TINTE = [[111, 214, 224], [224, 90, 168]];
+    const vacio = (n) => Array.from({ length: n }, () => ({ ch: " ", fg: null }));
+    return [0, 1, 2, 3, 4, 5].map((k) => ({
+      ms: k % 2 ? 45 : 90,
+      L: L.map((fila) => {
+        let f = fila.map((c) => (c.ch.trim() && r() < 0.08 ? { ch: RUIDO[(r() * RUIDO.length) | 0], fg: TINTE[(r() * 2) | 0], bg: c.bg } : c));
+        if (f.length && r() < 0.28) {
+          const d = 1 + ((r() * 3) | 0);
+          f = r() < 0.5 ? [...vacio(d), ...f].slice(0, fila.length) : [...f.slice(d), ...vacio(d)];
+        }
+        return f;
+      }),
+    }));
+  }
+  return [];
 }
 
 // ── Mostrar y exportar ──
@@ -582,29 +721,105 @@ function aHtml(L) {
 }
 const aTexto = (L) => L.map((f) => f.map((c) => c.ch).join("").replace(/\s+$/, "")).join("\n");
 
-// Script de bash con los colores en código ANSI de 24 bits (Termux, y casi toda terminal moderna)
-function aBash(L) {
+// Un renglón en código ANSI de 24 bits (Termux y casi toda terminal moderna), listo para printf.
+// limpiar = borrar lo que quedó a la derecha (hace falta al redibujar encima en las animaciones)
+function lineaAnsi(fila, limpiar) {
   const k = (c) => (c ? c.join(";") : "");
-  const cuerpo = L.map((fila) => {
-    let fin = fila.length; while (fin > 0 && fila[fin - 1].ch === " " && !fila[fin - 1].bg) fin--; // sin espacios sobrantes
-    let s = "", fg0 = "", bg0 = "";
-    for (const cel of fila.slice(0, fin)) {
-      const fg = cel.ch === " " ? fg0 : k(cel.fg), bg = k(cel.bg); // a un espacio no le importa el color de letra
-      if (fg !== fg0 || bg !== bg0) {
-        s += `\\033[0${fg ? ";38;2;" + fg : ""}${bg ? ";48;2;" + bg : ""}m`;
-        fg0 = fg; bg0 = bg;
-      }
-      s += cel.ch === "\\" ? "\\\\" : cel.ch === "%" ? "%%" : cel.ch; // printf: \ y % se escapan
+  let fin = fila.length; while (fin > 0 && fila[fin - 1].ch === " " && !fila[fin - 1].bg) fin--; // sin espacios sobrantes
+  let s = "", fg0 = "", bg0 = "";
+  for (const cel of fila.slice(0, fin)) {
+    const fg = cel.ch === " " ? fg0 : k(cel.fg), bg = k(cel.bg); // a un espacio no le importa el color de letra
+    if (fg !== fg0 || bg !== bg0) {
+      s += `\\033[0${fg ? ";38;2;" + fg : ""}${bg ? ";48;2;" + bg : ""}m`;
+      fg0 = fg; bg0 = bg;
     }
-    return s + (fg0 || bg0 ? "\\033[0m" : "");
-  }).join("\n").replace(/'/g, "'\\''");
-  return `#!/usr/bin/env bash\n# Hecho en Forja ANSI\nprintf '${cuerpo}\\n'\n`;
+    s += cel.ch === "\\" ? "\\\\" : cel.ch === "%" ? "%%" : cel.ch; // printf: \ y % se escapan
+  }
+  return s + (fg0 || bg0 ? "\\033[0m" : "") + (limpiar ? "\\033[K" : "");
+}
+const comillas = (s) => s.replace(/'/g, "'\\''"); // dentro de '…' de bash, una ' se escribe '\''
+const bloqueBash = (L, limpiar) => `printf '${comillas(L.map((f) => lineaAnsi(f, limpiar)).join("\n"))}\\n'`;
+
+// Las funciones de bash del banner: banner (quieto) y, si hay animación, banner_anim
+function bashBanner(L, anim) {
+  const quieto = `banner() {\n${bloqueBash(L)}\n}`;
+  if (anim === "ninguna" || !L.length) return { fn: quieto, llamar: "banner" };
+  if (anim === "renglones") {
+    return { llamar: "banner_anim", fn: quieto + "\nbanner_anim() {\n" + L.map((f) => `  printf '${comillas(lineaAnsi(f))}\\n'; sleep 0.03`).join("\n") + "\n}" };
+  }
+  // Los demás redibujan en el mismo lugar: imprimen el cuadro y suben el cursor H renglones
+  const H = L.length, W = Math.max(...L.map((f) => f.length));
+  const pasos = cuadros(L, anim).map((c) => `  ${bloqueBash(c.L, true)}; sleep ${(c.ms / 1000).toFixed(2)}; printf '\\033[${H}A'`).join("\n");
+  return {
+    llamar: "banner_anim",
+    fn: quieto + `\nbanner_anim() {
+  local filas cols
+  read -r filas cols < <(stty size 2>/dev/null)
+  # Si la pantalla es más chica que el banner, sale quieto (redibujar encima necesita que quepa)
+  if [ -z "$cols" ] || [ "$cols" -lt ${W} ] || [ "$filas" -le ${H} ]; then banner; return; fi
+  printf '\\033[?25l'
+${pasos}
+  ${bloqueBash(L, true)}
+  printf '\\033[?25h'
+}`,
+  };
+}
+// Si algo lo corta a la mitad (Ctrl+C), que el cursor y los colores vuelvan a la normalidad
+const ARREGLAR = `trap 'printf "\\033[?25h\\033[0m"' EXIT`;
+function aBash(L, anim = "ninguna") {
+  const b = bashBanner(L, anim);
+  return `#!/usr/bin/env bash\n# Hecho en Forja ANSI\n${ARREGLAR}\n${b.fn}\n${b.llamar}\n`;
+}
+// El menú completo: banner, estado de Null, la caja con opciones y un case que corre lo elegido
+function aMenu(o) {
+  const ops = opcionesMenu(o), banner = bannerMenu(o), b = bashBanner(banner, o.anim);
+  const color = (rgb) => (o.pintura === "ninguno" ? "" : `\\033[38;2;${rgb.join(";")}m`);
+  return [
+    "#!/usr/bin/env bash",
+    `# Menú de terminal hecho en Forja ANSI. Se abre escribiendo: ${o.nNombre}`,
+    "# Para cambiar lo que hace una opción, edita su renglón en el case de abajo (o vuelve a la Forja).",
+    ARREGLAR,
+    "trap 'true' INT  # Ctrl+C detiene lo que esté corriendo (por ejemplo Null) pero no cierra el menú",
+    banner.length ? b.fn : "banner() { :; }",
+    o.nEstado
+      ? `estado() {
+  command -v pgrep >/dev/null || return
+  if pgrep -f "node index.js" >/dev/null; then printf '  ${color(PRENDIDO)}● Null prendido\\033[0m\\n'
+  else printf '  ${color(APAGADO)}○ Null apagado\\033[0m\\n'; fi
+}`
+      : "estado() { :; }",
+    `caja() {\n${bloqueBash(cajaMenu(o))}\n}`,
+    "primera=1",
+    "while true; do",
+    "  clear",
+    banner.length && b.llamar === "banner_anim" ? '  if [ -n "$primera" ]; then banner_anim; primera=; else banner; fi' : "  banner",
+    banner.length ? "  echo" : "",
+    "  estado",
+    "  caja",
+    `  read -rp $'  ${color(o.c2)}elige › \\033[0m' op || exit 0`,
+    '  case "$op" in',
+    // Cada opción corre entre ( ) para que un cd no cambie la carpeta del menú; el ) va en su
+    // propio renglón por si el comando termina en un comentario con #
+    ...ops.map((x, i) => `    ${i + 1}) # ${x.nombre}\n      ( ${x.cmd}\n      ) ;;`),
+    "    0|q|s|salir) exit 0 ;;",
+    '    "") continue ;;',
+    "    *) printf '  No hay opción %s\\n' \"$op\"; sleep 1; continue ;;",
+    "  esac",
+    `  echo; read -rp $'  ${color(APAGADO)}Enter para volver al menú…\\033[0m' _ || exit 0`,
+    "done",
+    "",
+  ].filter((l) => l !== "").join("\n") + "\n";
+}
+// Lo que se copia o descarga según la pestaña
+function exportar() {
+  const o = leerOpciones();
+  return modo === "menu" ? aMenu(o) : aBash(ultimo, o.anim);
 }
 
 // ── La página ──
 let modo = "logo", ultimo = [];
 // Cada pestaña recuerda su pintura (a una foto le queda su color; a un logo, el gris)
-const pinturaDe = { logo: "gris", imagen: "original", marco: "gris" };
+const pinturaDe = { logo: "gris", imagen: "original", marco: "gris", menu: "gris" };
 
 FUENTES.forEach(([f, n]) => $("fuente").add(new Option(`${n} · ${f}`, f)));
 
@@ -615,17 +830,25 @@ function actualizarValores() {
   $("v-brillo").textContent = $("brillo").value;
   $("v-contraste").textContent = $("contraste").value;
   $("v-mAncho").textContent = $("mAncho").value + " col";
+  $("v-nAncho").textContent = $("nAncho").value + " col";
   $("arte").style.fontSize = $("zoom").value + "px";
 }
 
 let pendiente = 0;
-function programar() { cancelAnimationFrame(pendiente); pendiente = requestAnimationFrame(dibujar); }
+function programar() { cancelAnimationFrame(pendiente); pendiente = requestAnimationFrame(dibujar); guardar(); }
 async function dibujar() {
+  animando++; // si se estaba viendo una animación, se corta
   actualizarValores();
   const o = leerOpciones();
   if (modo !== "imagen" && o.pintura === "original") o.pintura = "gris"; // "colores de la foto" solo existe en Imagen
   try { await document.fonts.load(`${PESO[o.fuente] || "400"} 100px "${o.fuente}"`, o.texto || "A"); } catch {}
-  ultimo = modo === "logo" ? celdasLogo(o) : modo === "imagen" ? celdasImagen(o) : celdasMarco(o);
+  ultimo = modo === "logo" ? celdasLogo(o) : modo === "imagen" ? celdasImagen(o) : modo === "menu" ? celdasMenu(o) : celdasMarco(o);
+  // Botones y guía según la pestaña: el menú se baja como comando, lo demás como banner.sh
+  const n = o.nNombre;
+  $("copiarTermux").textContent = modo === "menu" ? "Copiar el menú" : "Copiar para Termux";
+  $("descargar").textContent = modo === "menu" ? `Descargar ${n}.sh` : "Descargar banner.sh";
+  document.querySelectorAll(".nombreCmd").forEach((e) => (e.textContent = n));
+  document.querySelectorAll("[data-guia]").forEach((d) => (d.hidden = (d.dataset.guia === "menu") !== (modo === "menu")));
   $("arte").innerHTML = aHtml(ultimo) || '<span style="color:#8d8798">Escribe algo a la izquierda.</span>';
   const ancho = Math.max(0, ...ultimo.map((f) => f.length));
   $("medidas").textContent = `${ancho} columnas × ${ultimo.length} renglones` +
@@ -633,16 +856,67 @@ async function dibujar() {
 }
 
 // Pestañas
-document.querySelectorAll(".pestanas button").forEach((b) => b.addEventListener("click", () => {
-  pinturaDe[modo] = $("pintura").value;
-  modo = b.dataset.modo;
-  document.querySelectorAll(".pestanas button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+function irA(nuevo, cambiarPintura = true) {
+  if (cambiarPintura) pinturaDe[modo] = $("pintura").value;
+  modo = nuevo;
+  document.querySelectorAll(".pestanas button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.modo === modo)));
   document.querySelectorAll("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== modo));
-  $("pintura").value = pinturaDe[modo];
+  if (cambiarPintura) $("pintura").value = pinturaDe[modo];
   $("pintura").querySelector('[value="original"]').disabled = modo !== "imagen";
   programar();
-}));
+}
+document.querySelectorAll(".pestanas button").forEach((b) => b.addEventListener("click", () => irA(b.dataset.modo)));
 $("pintura").querySelector('[value="original"]').disabled = true;
+
+// ── Recordar lo último que hiciste (solo en este navegador) ──
+// Se guarda el valor de cada control por su id; la foto no (puede pesar mucho)
+const LLAVE = "forja-ansi-v1";
+function guardar() {
+  try {
+    const v = {};
+    $("controles").querySelectorAll("input[id], select[id], textarea[id]").forEach((e) => {
+      if (e.type !== "file") v[e.id] = e.type === "checkbox" ? e.checked : e.value;
+    });
+    localStorage.setItem(LLAVE, JSON.stringify({ v, modo, pinturaDe }));
+  } catch {}
+}
+function recuperar() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LLAVE) || "null");
+    if (!d) return;
+    for (const [id, val] of Object.entries(d.v || {})) {
+      const e = $(id); if (!e || e.type === "file") continue;
+      if (e.type === "checkbox") e.checked = !!val;
+      else if (e.tagName !== "SELECT" || [...e.options].some((op) => op.value === val)) e.value = val;
+    }
+    Object.assign(pinturaDe, d.pinturaDe || {});
+    if (d.modo && d.modo !== "logo" && document.querySelector(`[data-modo="${d.modo}"]`)) irA(d.modo, false);
+  } catch {}
+}
+$("fabrica").addEventListener("click", () => {
+  try { localStorage.removeItem(LLAVE); } catch {}
+  location.reload();
+});
+
+// ── Ver la animación en la página ──
+let animando = 0;
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+$("probar").addEventListener("click", async () => {
+  const o = leerOpciones();
+  if (o.anim === "ninguna") { avisar("Elige una animación en «al abrir»."); return; }
+  // En el menú solo se anima el banner; lo de abajo aparece al final
+  const banner = modo === "menu" ? bannerMenu(o) : ultimo, final = ultimo;
+  // Lo de abajo del banner (en el menú, la caja) se queda quieto mientras tanto; en "renglones" sale al final
+  const resto = o.anim === "renglones" ? [] : ultimo.slice(banner.length);
+  if (!banner.length) { avisar("No hay banner que animar."); return; }
+  const yo = ++animando;
+  for (const c of cuadros(banner, o.anim)) {
+    if (yo !== animando) return;
+    $("arte").innerHTML = aHtml([...c.L, ...resto]) || " ";
+    await esperar(c.ms * (o.anim === "renglones" ? 1 : 1.4));
+  }
+  if (yo === animando) $("arte").innerHTML = aHtml(final);
+});
 
 $("controles").addEventListener("input", programar);
 $("controles").addEventListener("submit", (e) => e.preventDefault());
@@ -674,15 +948,16 @@ function copiar(texto, que) {
     navigator.clipboard.writeText(texto).then(() => { $("respaldo").hidden = true; avisar(`✓ Copiado ${que}.`); }, plan_b);
   } catch { plan_b(); }
 }
-$("copiarTermux").addEventListener("click", () => copiar(aBash(ultimo), "el script para Termux (pégalo en ~/.banner.sh)"));
+$("copiarTermux").addEventListener("click", () => copiar(exportar(), modo === "menu" ? "el menú (guárdalo como comando, mira los pasos abajo)" : "el script para Termux (pégalo en ~/.banner.sh)"));
 $("copiarTexto").addEventListener("click", () => copiar(aTexto(ultimo), "el texto, sin colores"));
 $("copiarWa").addEventListener("click", () => copiar("```" + aTexto(ultimo) + "```", "con ``` para que WhatsApp lo alinee"));
 // Descarga el script como archivo (en Termux: mover de Descargas con  cp ~/storage/downloads/banner.sh ~/.banner.sh)
 $("descargar").addEventListener("click", () => {
-  const url = URL.createObjectURL(new Blob([aBash(ultimo)], { type: "text/x-shellscript" }));
-  const a = document.createElement("a"); a.href = url; a.download = "banner.sh"; a.click();
+  const nombre = modo === "menu" ? nombreCmd() + ".sh" : "banner.sh";
+  const url = URL.createObjectURL(new Blob([exportar()], { type: "text/x-shellscript" }));
+  const a = document.createElement("a"); a.href = url; a.download = nombre; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
-  avisar("✓ Descargado banner.sh");
+  avisar("✓ Descargado " + nombre);
 });
 
 // El encabezado de la página se hace con el mismo motor
@@ -707,6 +982,7 @@ document.fonts.ready.then(() => {
   $("arte").style.lineHeight = alto; $("heroe").style.lineHeight = alto;
   heroe(); dibujar();
 });
+recuperar();
 actualizarValores();
 dibujar();
 </script>
