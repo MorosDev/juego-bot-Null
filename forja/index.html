@@ -208,10 +208,10 @@ Lo que nadie guardó, aquí se queda.</textarea>
         <label>Opciones <small>(una por renglón: Nombre | comando · máx. 9 · el 0 siempre es Salir)</small>
           <textarea id="nOps" rows="7" spellcheck="false">Prender Null | cd ~/null2 && sh iniciar.sh
 Prender (forzar) | cd ~/null2 && sh iniciar.sh forzar
-Apagar Null | pkill -INT -f "node index.js" && echo "Apagando… espera a que diga Datos subidos" || echo "Null no estaba prendido"
+Apagar Null | pkill -INT -f "[n]ode index.js" && echo "Apagando… espera a que diga Datos subidos" || echo "Null no estaba prendido"
 Actualizar | cd ~/null2 && git pull && npm install --no-audit --no-fund --silent
 Ver errores | tail -n 40 ~/null2/datos/errores.log 2>/dev/null || echo "Sin errores guardados"
-Respaldo a Descargas | pgrep -f "node index.js" >/dev/null && echo "Apaga Null primero" || { cp ~/null2/datos/null.db ~/storage/downloads/null-$(date +%F).db && echo "Listo: null-$(date +%F).db en Descargas"; }</textarea>
+Respaldo a Descargas | pgrep -f "[n]ode index.js" >/dev/null && echo "Apaga Null primero" || { cp ~/null2/datos/null.db ~/storage/downloads/null-$(date +%F).db && echo "Listo: null-$(date +%F).db en Descargas"; }</textarea>
         </label>
         <div class="dos">
           <label>Ancho <span class="valor" id="v-nAncho"></span><input type="range" id="nAncho" min="30" max="90" value="44"></label>
@@ -224,7 +224,18 @@ Respaldo a Descargas | pgrep -f "node index.js" >/dev/null && echo "Apaga Null p
             </select>
           </label>
         </div>
-        <label class="fila"><input type="checkbox" id="nLogo" checked> Logo arriba (el de la pestaña Logo)</label>
+        <label>Pie <small>(va dentro del borde de abajo)</small> <input type="text" id="nPie" value="lo que nadie guardó"></label>
+        <label>Letra del logo <small>(el texto es el de la pestaña Logo)</small>
+          <select id="nFuente"><option value="">La de la pestaña Logo</option></select>
+        </label>
+        <label>Estilo del logo
+          <select id="nLogoEstilo">
+            <option value="bloques">Bloques ░▒▓█ con sombra</option>
+            <option value="medios">Medios bloques ▀▄ (más fino)</option>
+            <option value="igual">Igual que en la pestaña Logo</option>
+            <option value="ninguno">Sin logo</option>
+          </select>
+        </label>
         <label class="fila"><input type="checkbox" id="nEstado" checked> Decir si Null está prendido</label>
       </div>
 
@@ -295,6 +306,7 @@ Respaldo a Descargas | pgrep -f "node index.js" >/dev/null && echo "Apaga Null p
           <li>Ponlo como comando: <code>cp ~/storage/downloads/<span class="nombreCmd">null</span>.sh $PREFIX/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x $PREFIX/bin/<span class="nombreCmd">null</span></code></li>
           <li>Ábrelo escribiendo <code class="nombreCmd">null</code>. Eliges con el número y <kbd>Enter</kbd>; <kbd>0</kbd> sale. <kbd>Ctrl</kbd>+<kbd>C</kbd> detiene lo que esté corriendo (por ejemplo Null) y te regresa al menú.</li>
           <li>Que salga solo al abrir Termux: <code>echo <span class="nombreCmd">null</span> &gt;&gt; ~/.bashrc</code> (y <code>touch ~/.hushlogin</code> para quitar el saludo).</li>
+          <li>¿Las <b>l</b> y las <b>i</b> salen como barras gruesas? Es la letra de Termux. Pon una clara (Null ya la trae): <code>mkdir -p ~/.termux &amp;&amp; cp ~/null2/assets/fuentes/JetBrainsMono.ttf ~/.termux/font.ttf &amp;&amp; termux-reload-settings</code></li>
           <li>En la laptop: <code>mkdir -p ~/.local/bin &amp;&amp; cp ~/Descargas/<span class="nombreCmd">null</span>.sh ~/.local/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x ~/.local/bin/<span class="nombreCmd">null</span></code>. "Respaldo a Descargas" usa la carpeta de Termux: cámbialo ahí.</li>
         </ol>
       </details>
@@ -337,7 +349,7 @@ function leerOpciones() {
     contraste: n("contraste"), invertir: b("invertir"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
     mAncho: n("mAncho"), mBorde: s("mBorde"), mLogo: b("mLogo"), pintura: s("pintura"), c1: hex(s("c1")), c2: hex(s("c2")),
     nNombre: nombreCmd(), nTitulo: s("nTitulo"), nOps: s("nOps"), nAncho: n("nAncho"), nBorde: s("nBorde"),
-    nLogo: b("nLogo"), nEstado: b("nEstado"), anim: s("anim"),
+    nLogoEstilo: s("nLogoEstilo"), nFuente: s("nFuente"), nPie: s("nPie"), nEstado: b("nEstado"), anim: s("anim"),
   };
 }
 
@@ -632,7 +644,9 @@ function colorear(filas, o, W) {
 function opcionesMenu(o) {
   return o.nOps.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && l.includes("|"))
     .map((l) => { const i = l.indexOf("|"); return { nombre: l.slice(0, i).trim(), cmd: l.slice(i + 1).trim().replace(/;;/g, ";") }; })
-    .filter((x) => x.nombre && x.cmd).slice(0, 9);
+    .filter((x) => x.nombre && x.cmd).slice(0, 9)
+    // Opciones guardadas con la versión de antes: mismo arreglo de [n]ode que en estado()
+    .map((x) => ({ ...x, cmd: x.cmd.replace(/-f "node index\.js"/g, '-f "[n]ode index.js"') }));
 }
 function cajaMenu(o) {
   const B = BORDES[o.nBorde], W = o.nAncho, dentro = W - 4, ops = opcionesMenu(o);
@@ -646,13 +660,26 @@ function cajaMenu(o) {
   ops.forEach((x, i) => opcion(String(i + 1), x.nombre));
   filas.push([[B.ml + B.h.repeat(W - 2) + B.mr, "borde"]]);
   opcion("0", "Salir");
-  filas.push([[B.c + B.h.repeat(W - 2) + B.d, "borde"]]);
+  // Pie metido en el borde de abajo, como en el marco NFO
+  const pie = o.nPie.trim() ? ` ${o.nPie.trim().slice(0, W - 8)} ` : "";
+  const izqP = Math.floor((W - 2 - pie.length) / 2);
+  filas.push([[B.c + B.h.repeat(izqP), "borde"], [pie, "pie"], [B.h.repeat(W - 2 - izqP - pie.length) + B.d, "borde"]]);
   return colorear(filas, o, W);
 }
 const PRENDIDO = [126, 224, 150], APAGADO = [141, 135, 152];
 function bannerMenu(o) {
-  if (!o.nLogo) return [];
-  return celdasLogo({ ...o, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho);
+  if (o.nLogoEstilo === "ninguno") return [];
+  // El menú tiene su propio estilo de logo: en Termux las letras ASCII (@#%) se ven sueltas, los bloques no
+  const estilo = o.nLogoEstilo === "igual" ? {}
+    : o.nLogoEstilo === "medios" ? { juego: "medios", relleno: "solido", sombra: false, contorno: false }
+    : { juego: "bloques", relleno: "solido", sombra: true, contorno: false };
+  const fuente = o.nFuente || o.fuente;
+  const L = celdasLogo({ ...o, ...estilo, fuente, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho);
+  // Sin renglones vacíos arriba ni abajo: en el celular cada renglón cuenta
+  const vacia = (f) => f.every((c) => c.ch === " ");
+  while (L.length && vacia(L[0])) L.shift();
+  while (L.length && vacia(L[L.length - 1])) L.pop();
+  return L;
 }
 // Lo que se ve en la página: banner, estado de ejemplo, la caja y el renglón donde se escribe
 function celdasMenu(o) {
@@ -784,7 +811,8 @@ function aMenu(o) {
     o.nEstado
       ? `estado() {
   command -v pgrep >/dev/null || return
-  if pgrep -f "node index.js" >/dev/null; then printf '  ${color(PRENDIDO)}● Null prendido\\033[0m\\n'
+  # [n]ode: así pgrep no se encuentra a sí mismo (en algunos Android sí lo hace y diría "prendido" siempre)
+  if pgrep -f "[n]ode index.js" >/dev/null; then printf '  ${color(PRENDIDO)}● Null prendido\\033[0m\\n'
   else printf '  ${color(APAGADO)}○ Null apagado\\033[0m\\n'; fi
 }`
       : "estado() { :; }",
@@ -819,9 +847,12 @@ function exportar() {
 // ── La página ──
 let modo = "logo", ultimo = [];
 // Cada pestaña recuerda su pintura (a una foto le queda su color; a un logo, el gris)
-const pinturaDe = { logo: "gris", imagen: "original", marco: "gris", menu: "gris" };
+const pinturaDe = { logo: "gris", imagen: "original", marco: "gris", menu: "vertical" };
 
 FUENTES.forEach(([f, n]) => $("fuente").add(new Option(`${n} · ${f}`, f)));
+// En el menú (44 columnas) las góticas no se leen: por defecto va una letra gruesa y clara
+FUENTES.forEach(([f, n]) => $("nFuente").add(new Option(`${n} · ${f}`, f)));
+$("nFuente").value = "Rubik Mono One";
 
 function actualizarValores() {
   $("v-ancho").textContent = $("ancho").value + " col";
@@ -841,7 +872,10 @@ async function dibujar() {
   actualizarValores();
   const o = leerOpciones();
   if (modo !== "imagen" && o.pintura === "original") o.pintura = "gris"; // "colores de la foto" solo existe en Imagen
-  try { await document.fonts.load(`${PESO[o.fuente] || "400"} 100px "${o.fuente}"`, o.texto || "A"); } catch {}
+  try {
+    await document.fonts.load(`${PESO[o.fuente] || "400"} 100px "${o.fuente}"`, o.texto || "A");
+    if (modo === "menu" && o.nFuente) await document.fonts.load(`${PESO[o.nFuente] || "400"} 100px "${o.nFuente}"`, o.texto || "A");
+  } catch {}
   ultimo = modo === "logo" ? celdasLogo(o) : modo === "imagen" ? celdasImagen(o) : modo === "menu" ? celdasMenu(o) : celdasMarco(o);
   // Botones y guía según la pestaña: el menú se baja como comando, lo demás como banner.sh
   const n = o.nNombre;
