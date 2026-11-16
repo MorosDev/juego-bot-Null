@@ -236,6 +236,9 @@ Respaldo a Descargas | pgrep -f "[n]ode index.js" >/dev/null && echo "Apaga Null
             <option value="ninguno">Sin logo</option>
           </select>
         </label>
+        <label>Alto del logo <span class="valor" id="v-nAlto"></span>
+          <input type="range" id="nAlto" min="60" max="200" value="110">
+        </label>
         <label class="fila"><input type="checkbox" id="nEstado" checked> Decir si Null está prendido</label>
       </div>
 
@@ -349,7 +352,7 @@ function leerOpciones() {
     contraste: n("contraste"), invertir: b("invertir"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
     mAncho: n("mAncho"), mBorde: s("mBorde"), mLogo: b("mLogo"), pintura: s("pintura"), c1: hex(s("c1")), c2: hex(s("c2")),
     nNombre: nombreCmd(), nTitulo: s("nTitulo"), nOps: s("nOps"), nAncho: n("nAncho"), nBorde: s("nBorde"),
-    nLogoEstilo: s("nLogoEstilo"), nFuente: s("nFuente"), nPie: s("nPie"), nEstado: b("nEstado"), anim: s("anim"),
+    nLogoEstilo: s("nLogoEstilo"), nFuente: s("nFuente"), nAlto: n("nAlto"), nPie: s("nPie"), nEstado: b("nEstado"), anim: s("anim"),
   };
 }
 
@@ -674,12 +677,18 @@ function bannerMenu(o) {
     : o.nLogoEstilo === "medios" ? { juego: "medios", relleno: "solido", sombra: false, contorno: false }
     : { juego: "bloques", relleno: "solido", sombra: true, contorno: false };
   const fuente = o.nFuente || o.fuente;
+  // Su propio alto: con el teclado abierto a Termux le quedan ~29 renglones y el menú entero tiene que caber
+  if (o.nLogoEstilo !== "igual") estilo.estirar = o.nAlto;
   const L = celdasLogo({ ...o, ...estilo, fuente, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho);
   // Sin renglones vacíos arriba ni abajo: en el celular cada renglón cuenta
   const vacia = (f) => f.every((c) => c.ch === " ");
   while (L.length && vacia(L[0])) L.shift();
   while (L.length && vacia(L[L.length - 1])) L.pop();
   return L;
+}
+// Renglones que ocupa el menú con logo: logo + hueco + estado + caja + "elige" + 2 para lo que se escriba
+function renglonesMenu(o, banner) {
+  return banner.length + 1 + (o.nEstado ? 1 : 0) + cajaMenu(o).length + 1 + 2;
 }
 // Lo que se ve en la página: banner, estado de ejemplo, la caja y el renglón donde se escribe
 function celdasMenu(o) {
@@ -817,11 +826,18 @@ function aMenu(o) {
 }`
       : "estado() { :; }",
     `caja() {\n${bloqueBash(cajaMenu(o))}\n}`,
+    banner.length ? `# El menú con logo necesita ${renglonesMenu(o, banner)} renglones y ${Math.max(...banner.map((f) => f.length))} columnas
+cabe() {
+  local filas cols
+  read -r filas cols < <(stty size 2>/dev/null)
+  [ -z "$filas" ] || { [ "$filas" -ge ${renglonesMenu(o, banner)} ] && [ "$cols" -ge ${Math.max(...banner.map((f) => f.length))} ]; }
+}` : "",
     "primera=1",
     "while true; do",
     "  clear",
-    banner.length && b.llamar === "banner_anim" ? '  if [ -n "$primera" ]; then banner_anim; primera=; else banner; fi' : "  banner",
-    banner.length ? "  echo" : "",
+    // El logo solo sale si cabe todo el menú; si no (por ejemplo con el teclado abierto), va sin logo
+    // en vez de que la terminal lo empuje hacia arriba y se vea cortado
+    banner.length ? `  if cabe; then ${b.llamar === "banner_anim" ? 'if [ -n "$primera" ]; then banner_anim; else banner; fi' : "banner"}; echo; fi\n  primera=` : "",
     "  estado",
     "  caja",
     `  read -rp $'  ${color(o.c2)}elige › \\033[0m' op || exit 0`,
@@ -862,6 +878,7 @@ function actualizarValores() {
   $("v-contraste").textContent = $("contraste").value;
   $("v-mAncho").textContent = $("mAncho").value + " col";
   $("v-nAncho").textContent = $("nAncho").value + " col";
+  $("v-nAlto").textContent = $("nAlto").value + "%";
   $("arte").style.fontSize = $("zoom").value + "px";
 }
 
@@ -887,6 +904,10 @@ async function dibujar() {
   const ancho = Math.max(0, ...ultimo.map((f) => f.length));
   $("medidas").textContent = `${ancho} columnas × ${ultimo.length} renglones` +
     (ancho > 46 ? " · en Termux vertical (≈45 col) se cortaría: gira el celular o baja el ancho" : " · cabe en Termux vertical");
+  if (modo === "menu" && o.nLogoEstilo !== "ninguno") {
+    const r = renglonesMenu(o, bannerMenu(o));
+    $("medidas").textContent += ` · con logo pide ${r} renglones` + (r > 29 ? " (con el teclado abierto Termux tiene ~29: saldrá sin logo; baja el alto)" : " (cabe aun con el teclado abierto)");
+  }
 }
 
 // Pestañas
