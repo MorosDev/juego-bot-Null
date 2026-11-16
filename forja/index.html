@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<!-- Forja ANSI — taller de arte ANSI/ASCII para la terminal (Termux, laptop) y para Null.
+     Todo vive en este archivo: no tiene servidor ni guarda nada fuera del navegador. Guía: ../CLAUDE.md -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0b0f">
+<meta name="description" content="Forja ANSI: logos de bloques ░▒▓█, fotos a ANSI y marcos NFO para tu terminal.">
+<title>Forja ANSI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Noto+Sans+Mono&family=UnifrakturMaguntia&family=Grenze+Gotisch:wght@800&family=Pirata+One&family=Metal+Mania&family=New+Rocker&family=Jacquard+24&family=Silkscreen&family=Press+Start+2P&family=Rubik+Glitch&family=Rubik+Mono+One&family=Bebas+Neue&family=Monoton&family=Creepster&family=Cinzel+Decorative:wght@900&family=Bungee&display=swap">
+<style>
+/* Taller de una pantalla de terminal: controles a la izquierda, la salida manda.
+   Un solo mundo oscuro a propósito (es una terminal), con colores puestos a mano. */
+:root {
+  --bg: #0c0b0f;        /* fondo de la terminal, con un tinte violeta */
+  --panel: #14131a;     /* paneles */
+  --raya: #2b2833;      /* líneas y bordes */
+  --texto: #dcd8e2;     /* texto principal */
+  --tenue: #8d8798;     /* texto secundario */
+  --acento: #e05aa8;    /* magenta tipo paleta CGA, como los packs ANSI */
+  --acento2: #6fd6e0;   /* cian CGA, para estados */
+  --f-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --f-arte: "Noto Sans Mono", "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--texto); font: 15px/1.5 var(--f-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.envoltura { max-width: 1280px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 6px; min-width: 0; }
+#heroe { margin: 0; font: 7px/1 var(--f-arte); overflow-x: auto; white-space: pre; min-height: 60px; }
+.lema { font: 13px/1.4 var(--f-mono); color: var(--tenue); letter-spacing: .02em; }
+.lema b { color: var(--acento); font-weight: 600; }
+
+.pestanas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--raya); }
+.pestanas button {
+  font: 600 13px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--tenue);
+  background: none; border: 1px solid transparent; border-bottom: 0; padding: 9px 14px; cursor: pointer; border-radius: 4px 4px 0 0;
+}
+.pestanas button[aria-selected="true"] { color: var(--texto); background: var(--panel); border-color: var(--raya); margin-bottom: -1px; }
+.pestanas button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--acento2); outline-offset: 2px; }
+
+.taller { display: grid; grid-template-columns: minmax(260px, 330px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 820px) { .taller { grid-template-columns: minmax(0, 1fr); } }
+
+.controles { background: var(--panel); border: 1px solid var(--raya); border-radius: 6px; padding: 16px; display: grid; gap: 14px; }
+.grupo { display: grid; gap: 10px; }
+.grupo + .grupo { border-top: 1px dashed var(--raya); padding-top: 14px; }
+.titulo-grupo { font: 600 11px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--acento); }
+label { display: grid; gap: 5px; font-size: 13px; color: var(--tenue); }
+label.fila { grid-template-columns: auto 1fr; align-items: center; gap: 8px; color: var(--texto); }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+input[type=text], textarea, select {
+  width: 100%; background: var(--bg); color: var(--texto); border: 1px solid var(--raya); border-radius: 4px;
+  padding: 7px 9px; font: 14px var(--f-mono);
+}
+textarea { resize: vertical; min-height: 110px; line-height: 1.45; }
+input[type=range] { width: 100%; accent-color: var(--acento); }
+input[type=checkbox] { accent-color: var(--acento); width: 16px; height: 16px; }
+input[type=color] { width: 100%; height: 34px; background: var(--bg); border: 1px solid var(--raya); border-radius: 4px; padding: 2px; }
+.valor { font: 12px var(--f-mono); color: var(--texto); float: right; }
+.archivo { border: 1px dashed var(--raya); border-radius: 4px; padding: 12px; text-align: center; font-size: 13px; color: var(--tenue); cursor: pointer; }
+.archivo:hover { border-color: var(--acento); color: var(--texto); }
+
+.salida { min-width: 0; display: grid; gap: 10px; }
+.barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.barra .zoom { display: flex; align-items: center; gap: 8px; font: 12px var(--f-mono); color: var(--tenue); margin-left: auto; min-width: 180px; }
+button.accion {
+  font: 600 13px var(--f-mono); color: var(--bg); background: var(--acento); border: 0; border-radius: 4px; padding: 9px 13px; cursor: pointer;
+}
+button.accion.sec { background: transparent; color: var(--texto); border: 1px solid var(--raya); }
+button.accion:hover { filter: brightness(1.12); }
+.lienzo { background: #000; border: 1px solid var(--raya); border-radius: 6px; overflow: auto; max-height: 72vh; padding: 14px; }
+#arte { margin: 0; font-family: var(--f-arte); line-height: 1; letter-spacing: 0; white-space: pre; color: #c9c5cf; width: max-content; }
+.medidas { font: 12px var(--f-mono); color: var(--tenue); }
+.aviso { font: 13px var(--f-mono); color: var(--acento2); min-height: 1.4em; }
+
+details.guia { background: var(--panel); border: 1px solid var(--raya); border-radius: 6px; padding: 12px 16px; }
+details.guia summary { cursor: pointer; font: 600 13px var(--f-mono); letter-spacing: .06em; color: var(--texto); }
+details.guia ol { margin: 10px 0 4px; padding-left: 20px; display: grid; gap: 8px; max-width: 72ch; }
+code, kbd { font: 13px var(--f-mono); background: var(--bg); border: 1px solid var(--raya); border-radius: 3px; padding: 1px 5px; color: var(--acento2); overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="envoltura">
+  <header>
+    <pre id="heroe" aria-label="Forja ANSI"></pre>
+    <div class="lema">taller de arte <b>ANSI</b> para tu terminal · letras de bloque, fotos y marcos NFO · se copia directo a Termux</div>
+  </header>
+
+  <nav class="pestanas" role="tablist">
+    <button role="tab" id="tab-logo" aria-selected="true" data-modo="logo">Logo</button>
+    <button role="tab" id="tab-imagen" aria-selected="false" data-modo="imagen">Imagen</button>
+    <button role="tab" id="tab-marco" aria-selected="false" data-modo="marco">Marco NFO</button>
+  </nav>
+
+  <div class="taller">
+    <form class="controles" id="controles" autocomplete="off">
+      <!-- ── LOGO ── -->
+      <div data-panel="logo" class="grupo">
+        <div class="titulo-grupo">texto</div>
+        <label>Lo que dice (hasta 3 renglones)
+          <textarea id="texto" rows="2">NULL</textarea>
+        </label>
+        <label>Letra
+          <select id="fuente"></select>
+        </label>
+        <label>Ancho <span class="valor" id="v-ancho"></span>
+          <input type="range" id="ancho" min="24" max="140" value="78">
+        </label>
+        <label>Estirar hacia arriba <span class="valor" id="v-estirar"></span>
+          <input type="range" id="estirar" min="60" max="220" value="170">
+        </label>
+      </div>
+      <div data-panel="logo" class="grupo">
+        <div class="titulo-grupo">bloques</div>
+        <label>Juego de caracteres
+          <select id="juego">
+            <option value="bloques">Bloques ░▒▓█ (estilo scene)</option>
+            <option value="medios">Medios bloques ▀▄ (más fino)</option>
+            <option value="ascii">ASCII puro @#%*</option>
+            <option value="braille">Braille ⣿ (mucho detalle)</option>
+          </select>
+        </label>
+        <label>Relleno
+          <select id="relleno">
+            <option value="solido">Sólido</option>
+            <option value="degradado">Degradado █▓▒░ (se desvanece)</option>
+            <option value="trama">Trama █▓</option>
+            <option value="rayas">Rayas ▀</option>
+            <option value="hueco">Hueco (borde lleno, dentro ░)</option>
+          </select>
+        </label>
+        <label class="fila"><input type="checkbox" id="sombra" checked> Sombra en trama</label>
+        <label class="fila"><input type="checkbox" id="contorno"> Contorno</label>
+      </div>
+
+      <!-- ── IMAGEN ── -->
+      <div data-panel="imagen" class="grupo" hidden>
+        <div class="titulo-grupo">imagen</div>
+        <label class="archivo" for="foto" id="soltar">Toca para elegir una foto, o arrástrala aquí<br><small>(hay una de ejemplo cargada)</small></label>
+        <input type="file" id="foto" accept="image/*" hidden>
+        <label>Ancho <span class="valor" id="v-anchoImg"></span>
+          <input type="range" id="anchoImg" min="20" max="160" value="80">
+        </label>
+        <label>Modo
+          <select id="modoImg">
+            <option value="medio">Color real con ▀ (lo mejor en terminal)</option>
+            <option value="bloques">Bloques ░▒▓█</option>
+            <option value="ascii">ASCII clásico</option>
+            <option value="detalle">ASCII con mucho detalle</option>
+            <option value="braille">Braille ⣿</option>
+          </select>
+        </label>
+        <div class="dos">
+          <label>Brillo <span class="valor" id="v-brillo"></span><input type="range" id="brillo" min="-60" max="60" value="0"></label>
+          <label>Contraste <span class="valor" id="v-contraste"></span><input type="range" id="contraste" min="-50" max="100" value="15"></label>
+        </div>
+        <label class="fila"><input type="checkbox" id="invertir"> Invertir (para fondo claro)</label>
+      </div>
+
+      <!-- ── MARCO ── -->
+      <div data-panel="marco" class="grupo" hidden>
+        <div class="titulo-grupo">ficha nfo</div>
+        <label>Título <input type="text" id="mTitulo" value="RELEASE INFORMATION"></label>
+        <label>Contenido <small>(Campo: valor · una línea sin “:” va centrada · línea vacía = separador)</small>
+          <textarea id="mCuerpo" rows="8">Nombre: Null 2.0
+Creador: Moros
+Sistema: Termux · Node · Baileys
+Estado: despierto
+
+Lo que nadie guardó, aquí se queda.</textarea>
+        </label>
+        <label>Pie <input type="text" id="mPie" value="© Moros · 2026"></label>
+        <div class="dos">
+          <label>Ancho <span class="valor" id="v-mAncho"></span><input type="range" id="mAncho" min="34" max="100" value="64"></label>
+          <label>Borde
+            <select id="mBorde">
+              <option value="doble">Doble ═</option>
+              <option value="simple">Simple ─</option>
+              <option value="redondo">Redondo ╭</option>
+              <option value="grueso">Grueso ━</option>
+            </select>
+          </label>
+        </div>
+        <label class="fila"><input type="checkbox" id="mLogo" checked> Poner el logo arriba</label>
+      </div>
+
+      <!-- ── COLOR (todos) ── -->
+      <div class="grupo">
+        <div class="titulo-grupo">color</div>
+        <label>Pintura
+          <select id="pintura">
+            <option value="gris">Gris de terminal (como los NFO)</option>
+            <option value="vertical">Degradado de arriba a abajo</option>
+            <option value="horizontal">Degradado de lado a lado</option>
+            <option value="arcoiris">Arcoíris</option>
+            <option value="original">Colores de la foto</option>
+            <option value="ninguno">Sin color</option>
+          </select>
+        </label>
+        <div class="dos" id="colores">
+          <label>Color 1 <input type="color" id="c1" value="#e9e5ef"></label>
+          <label>Color 2 <input type="color" id="c2" value="#e05aa8"></label>
+        </div>
+      </div>
+    </form>
+
+    <section class="salida">
+      <div class="barra">
+        <button type="button" class="accion" id="copiarTermux">Copiar para Termux</button>
+        <button type="button" class="accion sec" id="copiarTexto">Copiar texto</button>
+        <button type="button" class="accion sec" id="copiarWa">Copiar para WhatsApp</button>
+        <button type="button" class="accion sec" id="descargar">Descargar banner.sh</button>
+        <div class="zoom"><span>zoom</span><input type="range" id="zoom" min="4" max="22" value="11" aria-label="Zoom"></div>
+      </div>
+      <div class="lienzo"><pre id="arte"></pre></div>
+      <div class="medidas" id="medidas"></div>
+      <div class="aviso" id="aviso" role="status"></div>
+      <textarea id="respaldo" hidden aria-label="Texto para copiar a mano"></textarea>
+
+      <details class="guia" open>
+        <summary>Ponerlo al abrir Termux (o la terminal de tu laptop)</summary>
+        <ol>
+          <li>Toca <b>Copiar para Termux</b>. Copia un script con los colores ya puestos.</li>
+          <li>En Termux: <code>nano ~/.banner.sh</code>, pega con presión larga → Pegar, y guarda con <kbd>Ctrl</kbd>+<kbd>O</kbd>, <kbd>Enter</kbd>, <kbd>Ctrl</kbd>+<kbd>X</kbd>.</li>
+          <li>Que salga cada vez que abres: <code>echo 'bash ~/.banner.sh' &gt;&gt; ~/.bashrc</code></li>
+          <li>Para quitar el saludo de Termux que sale arriba: <code>touch ~/.hushlogin</code></li>
+          <li>Pruébalo sin cerrar: <code>bash ~/.banner.sh</code>. Si se ve cortado, baja el ancho aquí: Termux en vertical cabe ~45 columnas; en horizontal o en la laptop, 80 o más.</li>
+          <li>En la laptop (Linux o Mac) es igual, en <code>~/.bashrc</code> o <code>~/.zshrc</code>.</li>
+        </ol>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+// Letras de Google Fonts que se dibujan en un lienzo y luego se pasan a bloques
+const FUENTES = [
+  ["UnifrakturMaguntia", "Gótica fraktur"], ["Grenze Gotisch", "Gótica angosta"], ["Jacquard 24", "Gótica de pixeles"],
+  ["Pirata One", "Pirata"], ["Metal Mania", "Metal"], ["New Rocker", "Rocker"], ["Creepster", "Terror"],
+  ["Cinzel Decorative", "Romana decorada"], ["Rubik Glitch", "Glitch"], ["Monoton", "Neón de líneas"],
+  ["Press Start 2P", "Arcade 8 bits"], ["Silkscreen", "Pixel"], ["Rubik Mono One", "Bloque redondo"],
+  ["Bungee", "Letrero"], ["Bebas Neue", "Alta y angosta"],
+];
+const PESO = { "Grenze Gotisch": "800", "Cinzel Decorative": "900" };
+const ASPECTO = 2; // una celda de terminal mide el doble de alto que de ancho
+
+// ── Colores ──
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mezcla = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const oscuro = (a, t) => a.map((v) => Math.round(v * (1 - t)));
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+function hsl(h, s, l) {
+  const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return [f(0), f(8), f(4)].map((v) => Math.round(v * 255));
+}
+// Tono de cada bloque: lo más lleno brilla más (así sale el gris de los NFO)
+const TONO = { "█": 1, "▓": 0.86, "▒": 0.72, "░": 0.6 };
+
+function leerOpciones() {
+  const n = (id) => Number($(id).value), b = (id) => $(id).checked, s = (id) => $(id).value;
+  return {
+    modo, texto: s("texto"), fuente: s("fuente"), ancho: n("ancho"), estirar: n("estirar"), juego: s("juego"), relleno: s("relleno"),
+    sombra: b("sombra"), contorno: b("contorno"), anchoImg: n("anchoImg"), modoImg: s("modoImg"), brillo: n("brillo"),
+    contraste: n("contraste"), invertir: b("invertir"), mTitulo: s("mTitulo"), mCuerpo: s("mCuerpo"), mPie: s("mPie"),
+    mAncho: n("mAncho"), mBorde: s("mBorde"), mLogo: b("mLogo"), pintura: s("pintura"), c1: hex(s("c1")), c2: hex(s("c2")),
+  };
+}
+
+// ── Del lienzo a una rejilla: cada celda se parte en 2×4 sub-celdas (lo que usa el braille) ──
+function promediar(c, gw, gh) {
+  const W = c.width, H = c.height, d = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+  const n = gw * gh, R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n), A = new Float32Array(n), N = new Float32Array(n);
+  for (let y = 0; y < H; y++) {
+    const fila = Math.min(gh - 1, ((y * gh) / H) | 0) * gw;
+    for (let x = 0; x < W; x++) {
+      const j = fila + Math.min(gw - 1, ((x * gw) / W) | 0), i = (y * W + x) * 4, a = d[i + 3] / 255;
+      A[j] += a; R[j] += d[i] * a; G[j] += d[i + 1] * a; B[j] += d[i + 2] * a; N[j]++;
+    }
+  }
+  for (let j = 0; j < n; j++) { if (A[j] > 0) { R[j] /= A[j]; G[j] /= A[j]; B[j] /= A[j]; } A[j] /= N[j] || 1; }
+  return { gw, gh, R, G, B, A };
+}
+// Las 8 sub-celdas de la celda (fila, col): [arriba-izq, arriba-der, …] de arriba a abajo
+function subs(P, f, c, campo = "A") {
+  const out = [];
+  for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 2; sx++) out.push(P[campo][(f * 4 + sy) * P.gw + c * 2 + sx]);
+  return out;
+}
+// Braille: puntos 1-8 en el orden de Unicode
+const BIT = [0x1, 0x8, 0x2, 0x10, 0x4, 0x20, 0x40, 0x80];
+const braille = (s, u) => String.fromCharCode(0x2800 + s.reduce((m, v, i) => (v > u ? m | BIT[i] : m), 0));
+
+// ── LOGO ──
+function rasterLogo(o, cols) {
+  const lineas = o.texto.split("\n").map((s) => s.trimEnd()).slice(0, 3);
+  while (lineas.length > 1 && !lineas[lineas.length - 1]) lineas.pop();
+  if (!lineas.join("").trim()) return null;
+  const peso = PESO[o.fuente] || "400";
+  const c = document.createElement("canvas"), x = c.getContext("2d", { willReadFrequently: true });
+  x.font = `${peso} 100px "${o.fuente}", serif`;
+  const ms = lineas.map((l) => x.measureText(l || " "));
+  const anchoDe = (m) => m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+  const altos = ms.map((m) => Math.max(1, m.actualBoundingBoxAscent + m.actualBoundingBoxDescent));
+  const CW = 8, CH = CW * ASPECTO, est = o.estirar / 100, hueco = 14;
+  let k = (cols * CW * 0.98) / Math.max(...ms.map(anchoDe), 1);
+  const altoTotal = (altos.reduce((a, b) => a + b, 0) + hueco * (lineas.length - 1)) * est;
+  const maxFilas = 46;
+  if (altoTotal * k > maxFilas * CH) k = (maxFilas * CH) / altoTotal;
+  const filas = Math.max(1, Math.ceil((altoTotal * k) / CH));
+  c.width = cols * CW; c.height = filas * CH;
+  x.fillStyle = "#fff"; x.font = `${peso} ${100 * k}px "${o.fuente}", serif`;
+  let y = 0;
+  lineas.forEach((l, i) => {
+    const m = ms[i], w = anchoDe(m) * k;
+    x.save(); x.translate((c.width - w) / 2 + m.actualBoundingBoxLeft * k, y); x.scale(1, est);
+    x.fillText(l, 0, m.actualBoundingBoxAscent * k); x.restore();
+    y += (altos[i] + hueco) * k * est;
+  });
+  return { c, cols, filas };
+}
+
+function celdasLogo(o, anchoTotal = o.ancho) {
+  const margen = o.contorno ? 2 : 0, extra = o.sombra ? 2 : 0;
+  const r = rasterLogo(o, Math.max(8, anchoTotal - margen - extra));
+  if (!r) return [];
+  const P = promediar(r.c, r.cols * 2, r.filas * 4);
+  // 1) La letra
+  const L = [];
+  let fMin = Infinity, fMax = -1;
+  for (let f = 0; f < r.filas; f++) {
+    const fila = [];
+    for (let c = 0; c < r.cols; c++) {
+      const s = subs(P, f, c), cov = s.reduce((a, b) => a + b) / 8;
+      const arriba = (s[0] + s[1] + s[2] + s[3]) / 4, abajo = (s[4] + s[5] + s[6] + s[7]) / 4;
+      let ch = " ";
+      if (o.juego === "braille") ch = cov > 0.03 ? braille(s, 0.4) : " ";
+      else if (o.juego === "ascii") ch = " .:-=+*#%@"[Math.round(clamp(cov * 1.25) * 9)];
+      else if (o.juego === "medios") ch = arriba > 0.45 && abajo > 0.45 ? "█" : arriba > 0.45 ? "▀" : abajo > 0.45 ? "▄" : " ";
+      else if (cov >= 0.07) {
+        if (arriba > 0.55 && abajo > 0.55) ch = "LLENO";
+        else if (arriba > 0.5 && abajo < 0.2) ch = "▀";
+        else if (abajo > 0.5 && arriba < 0.2) ch = "▄";
+        else ch = cov > 0.5 ? "▓" : cov > 0.25 ? "▒" : "░";
+      }
+      if (ch.trim() && ch !== "⠀") { fMin = Math.min(fMin, f); fMax = Math.max(fMax, f); }
+      fila.push(ch === "⠀" ? " " : ch);
+    }
+    L.push(fila);
+  }
+  // 2) El relleno de los bloques llenos
+  const lleno = (f, c) => L[f]?.[c] === "LLENO" || L[f]?.[c] === "█";
+  const tramo = Math.max(1, fMax - fMin);
+  for (let f = 0; f < r.filas; f++) for (let c = 0; c < r.cols; c++) {
+    if (L[f][c] !== "LLENO") continue;
+    let ch = "█";
+    if (o.relleno === "degradado") { const t = (f - fMin) / tramo; ch = t < 0.45 ? "█" : t < 0.7 ? "▓" : t < 0.88 ? "▒" : "░"; }
+    else if (o.relleno === "trama") ch = (f + c) % 2 ? "█" : "▓";
+    else if (o.relleno === "rayas") ch = "▀";
+    else if (o.relleno === "hueco") ch = lleno(f - 1, c) && lleno(f + 1, c) && lleno(f, c - 1) && lleno(f, c + 1) ? "░" : "█";
+    L[f][c] = ch;
+  }
+  // 3) Rejilla final con margen para contorno y sombra; cada celda dice qué es (letra, sombra, contorno)
+  const alto = r.filas + margen + (o.sombra ? 1 : 0), ancho = r.cols + margen + extra;
+  const G = Array.from({ length: alto }, () => Array.from({ length: ancho }, () => ({ ch: " ", rol: null })));
+  const m = margen / 2;
+  for (let f = 0; f < r.filas; f++) for (let c = 0; c < r.cols; c++) if (L[f][c] !== " ") G[f + m][c + m] = { ch: L[f][c], rol: "letra" };
+  const ocupa = (f, c) => G[f]?.[c]?.rol === "letra";
+  if (o.contorno) {
+    const marca = o.juego === "ascii" ? "." : o.juego === "braille" ? "⠒" : "░";
+    for (let f = 0; f < alto; f++) for (let c = 0; c < ancho; c++) {
+      if (G[f][c].rol) continue;
+      let cerca = false;
+      for (let df = -1; df <= 1 && !cerca; df++) for (let dc = -1; dc <= 1; dc++) if (ocupa(f + df, c + dc)) { cerca = true; break; }
+      if (cerca) G[f][c] = { ch: marca, rol: "contorno" };
+    }
+  }
+  if (o.sombra) {
+    const marca = o.juego === "ascii" ? ":" : o.juego === "braille" ? "⠿" : "▒";
+    // Una fila abajo y dos columnas a la derecha = 45° (la celda es el doble de alta)
+    for (let f = alto - 1; f >= 0; f--) for (let c = ancho - 1; c >= 0; c--) {
+      if (!ocupa(f, c)) continue;
+      const t = G[f + 1]?.[c + 2];
+      if (t && !t.rol) G[f + 1][c + 2] = { ch: marca, rol: "sombra" };
+    }
+  }
+  return pintar(G, o);
+}
+
+// Le pone color a cada celda según la pintura elegida
+function pintar(G, o) {
+  const filas = G.length, cols = G[0]?.length || 1;
+  return G.map((fila, f) => fila.map((cel, c) => {
+    if (!cel.rol || o.pintura === "ninguno") return { ch: cel.ch, fg: null };
+    let base;
+    if (o.pintura === "vertical") base = mezcla(o.c1, o.c2, filas > 1 ? f / (filas - 1) : 0);
+    else if (o.pintura === "horizontal") base = mezcla(o.c1, o.c2, cols > 1 ? c / (cols - 1) : 0);
+    else if (o.pintura === "arcoiris") base = hsl((c / cols) * 300 + (f / filas) * 30, 0.72, 0.64);
+    else base = o.c1;
+    let fg = base;
+    if (cel.rol === "letra") fg = oscuro(base, 1 - (TONO[cel.ch] ?? 1));
+    else if (cel.rol === "sombra") fg = oscuro(base, 0.68);
+    else if (cel.rol === "contorno") fg = o.pintura === "gris" ? oscuro(o.c2, 0.15) : oscuro(base, 0.35);
+    return { ch: cel.ch, fg };
+  }));
+}
+
+// ── IMAGEN ──
+let imagen = null; // la foto elegida (o la luna de ejemplo)
+function lunaDeEjemplo() {
+  const c = document.createElement("canvas"); c.width = c.height = 640;
+  const x = c.getContext("2d");
+  x.fillStyle = "#07060a"; x.fillRect(0, 0, 640, 640);
+  for (let i = 0; i < 90; i++) { x.fillStyle = `rgba(230,220,255,${Math.random() * 0.8})`; x.fillRect(Math.random() * 640, Math.random() * 640, 2, 2); }
+  const g = x.createRadialGradient(250, 230, 30, 320, 320, 230);
+  g.addColorStop(0, "#f4eefc"); g.addColorStop(0.55, "#b9a9d6"); g.addColorStop(1, "#3b2f57");
+  x.fillStyle = g; x.beginPath(); x.arc(320, 320, 220, 0, 7); x.fill();
+  [[250, 260, 42], [380, 220, 28], [360, 390, 55], [230, 400, 22], [300, 330, 16], [430, 320, 20]].forEach(([cx, cy, r]) => {
+    const h = x.createRadialGradient(cx + r * 0.3, cy + r * 0.3, 1, cx, cy, r);
+    h.addColorStop(0, "rgba(40,30,70,.55)"); h.addColorStop(1, "rgba(40,30,70,0)");
+    x.fillStyle = h; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  });
+  // Un tajo magenta, para que se note el color
+  x.strokeStyle = "rgba(224,90,168,.9)"; x.lineWidth = 10; x.beginPath(); x.arc(320, 320, 260, 3.6, 5.4); x.stroke();
+  return c;
+}
+
+function celdasImagen(o) {
+  const src = imagen || (imagen = lunaDeEjemplo());
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  const cols = o.anchoImg, filas = Math.max(1, Math.round((cols * h) / w / ASPECTO));
+  // Se dibuja a 4× de la rejilla y luego se promedia: más parejo que dejar que el navegador achique
+  const c = document.createElement("canvas"); c.width = cols * 8; c.height = filas * 16;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  x.fillStyle = "#000"; x.fillRect(0, 0, c.width, c.height);
+  x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, c.width, c.height);
+  const P = promediar(c, cols * 2, filas * 4);
+  const ajustar = (v) => { let t = (v / 255 - 0.5) * (1 + o.contraste / 100) + 0.5 + o.brillo / 100; t = clamp(t); return o.invertir ? 1 - t : t; };
+  const luz = (r, g, b) => (0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const colorDe = (rgb, f, c) => {
+    const l = ajustar(luz(...rgb));
+    if (o.pintura === "ninguno") return null;
+    if (o.pintura === "original") { const k = l / Math.max(0.04, luz(...rgb) / 255); return rgb.map((v) => clamp(Math.round(v * k), 0, 255)); }
+    let base = o.c1;
+    if (o.pintura === "vertical") base = mezcla(o.c1, o.c2, f / Math.max(1, filas - 1));
+    else if (o.pintura === "horizontal") base = mezcla(o.c1, o.c2, c / Math.max(1, cols - 1));
+    else if (o.pintura === "arcoiris") base = hsl((c / cols) * 300, 0.72, 0.64);
+    return base.map((v) => Math.round(v * (0.25 + 0.75 * l)));
+  };
+  const prom = (idx) => ["R", "G", "B"].map((k) => idx.reduce((s, i) => s + P[k][i], 0) / idx.length);
+  const RAMPA = { bloques: " ░▒▓█", ascii: " .:-=+*#%@", detalle: " .'`^\",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$" };
+  const out = [];
+  for (let f = 0; f < filas; f++) {
+    const fila = [];
+    for (let c = 0; c < cols; c++) {
+      const ids = []; for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 2; sx++) ids.push((f * 4 + sy) * P.gw + c * 2 + sx);
+      if (o.modoImg === "medio") {
+        // ▀ con el color de arriba como letra y el de abajo como fondo: el doble de detalle vertical
+        const arriba = prom(ids.slice(0, 4)), abajo = prom(ids.slice(4));
+        const fg = colorDe(arriba, f, c) || [Math.round(ajustar(luz(...arriba)) * 255)].flatMap((v) => [v, v, v]);
+        const bg = colorDe(abajo, f, c) || [Math.round(ajustar(luz(...abajo)) * 255)].flatMap((v) => [v, v, v]);
+        fila.push({ ch: "▀", fg, bg });
+      } else if (o.modoImg === "braille") {
+        const s = ids.map((i) => ajustar(luz(P.R[i], P.G[i], P.B[i])));
+        const rgb = prom(ids), ch = braille(s, 0.5);
+        fila.push({ ch: ch === "⠀" ? " " : ch, fg: colorDe(rgb, f, c) });
+      } else {
+        const rgb = prom(ids), l = ajustar(luz(...rgb)), rampa = RAMPA[o.modoImg];
+        fila.push({ ch: rampa[Math.round(l * (rampa.length - 1))], fg: colorDe(rgb, f, c) });
+      }
+    }
+    out.push(fila);
+  }
+  return out;
+}
+
+// ── MARCO NFO ──
+const BORDES = {
+  doble: { h: "═", v: "║", a: "╔", b: "╗", c: "╚", d: "╝", ml: "╠", mr: "╣", sl: "╟", sh: "─", sr: "╢" },
+  simple: { h: "─", v: "│", a: "┌", b: "┐", c: "└", d: "┘", ml: "├", mr: "┤", sl: "├", sh: "┄", sr: "┤" },
+  redondo: { h: "─", v: "│", a: "╭", b: "╮", c: "╰", d: "╯", ml: "├", mr: "┤", sl: "├", sh: "┄", sr: "┤" },
+  grueso: { h: "━", v: "┃", a: "┏", b: "┓", c: "┗", d: "┛", ml: "┣", mr: "┫", sl: "┠", sh: "─", sr: "┨" },
+};
+function partir(t, n) { // corta un texto en renglones de n letras, sin romper palabras si se puede
+  const out = []; let l = "";
+  for (const p of String(t).split(/\s+/)) {
+    if (!p) continue;
+    if ((l + " " + p).trim().length <= n) l = (l + " " + p).trim();
+    else { if (l) out.push(l); l = p; while (l.length > n) { out.push(l.slice(0, n)); l = l.slice(n); } }
+  }
+  if (l) out.push(l);
+  return out.length ? out : [""];
+}
+function celdasMarco(o) {
+  const B = BORDES[o.mBorde], W = o.mAncho, dentro = W - 4;
+  const filas = []; // cada fila: lista de [texto, rol]
+  const linea = (partes) => filas.push(partes);
+  const centrado = (t, rol) => { const s = Math.max(0, Math.floor((dentro - t.length) / 2)); return [[" ".repeat(s), null], [t, rol], [" ".repeat(Math.max(0, dentro - s - t.length)), null]]; };
+  const caja = (partes) => linea([[B.v + " ", "borde"], ...partes, [" " + B.v, "borde"]]);
+  linea([[B.a + B.h.repeat(W - 2) + B.b, "borde"]]);
+  if (o.mTitulo.trim()) {
+    caja(centrado(`${B.sh}${B.sh} ${o.mTitulo.trim().toUpperCase().slice(0, dentro - 6)} ${B.sh}${B.sh}`, "titulo"));
+    linea([[B.ml + B.h.repeat(W - 2) + B.mr, "borde"]]);
+  }
+  const renglones = o.mCuerpo.split("\n");
+  const campos = renglones.filter((r) => /^[^:]{1,18}:\s*\S/.test(r)).map((r) => r.split(":")[0].trim());
+  const anchoCampo = Math.min(16, Math.max(0, ...campos.map((c) => c.length)));
+  for (const r of renglones) {
+    const m = r.match(/^([^:]{1,18}):\s*(.*)$/);
+    if (!r.trim()) { linea([[B.sl + B.sh.repeat(W - 2) + B.sr, "borde"]]); continue; }
+    if (m && m[2].trim()) {
+      const campo = m[1].trim().slice(0, anchoCampo), espacioValor = dentro - anchoCampo - 5;
+      partir(m[2], Math.max(4, espacioValor)).forEach((v, i) => caja([
+        [(i ? "" : campo).padEnd(anchoCampo), "campo"], [" [ ", "borde"], [v.padEnd(espacioValor), "valor"], [" ]", "borde"],
+      ]));
+    } else partir(r, dentro).forEach((t) => caja(centrado(t, "texto")));
+  }
+  // Pie dentro del borde de abajo:  ╚════ © Moros ════╝
+  const pie = o.mPie.trim() ? ` ${o.mPie.trim().slice(0, W - 10)} ` : "";
+  const izq = Math.floor((W - 2 - pie.length) / 2);
+  linea([[B.c + B.h.repeat(izq), "borde"], [pie, "pie"], [B.h.repeat(W - 2 - izq - pie.length) + B.d, "borde"]]);
+
+  // Colores: texto con el color 1, campos con el 2, el borde sigue la pintura
+  const cuantas = filas.length;
+  const out = filas.map((partes, f) => {
+    const fila = []; let c = 0;
+    for (const [t, rol] of partes) for (const ch of t) {
+      let fg = null;
+      if (o.pintura !== "ninguno" && rol) {
+        if (rol === "borde") {
+          fg = o.pintura === "vertical" ? mezcla(o.c1, o.c2, f / Math.max(1, cuantas - 1))
+            : o.pintura === "horizontal" ? mezcla(o.c1, o.c2, c / Math.max(1, W - 1))
+            : o.pintura === "arcoiris" ? hsl((c / W) * 300, 0.7, 0.62) : oscuro(o.c1, 0.42);
+        } else if (rol === "campo") fg = o.c2;
+        else if (rol === "pie") fg = oscuro(o.c1, 0.4);
+        else fg = o.c1;
+      }
+      fila.push({ ch, fg }); c++;
+    }
+    return fila;
+  });
+  if (!o.mLogo) return out;
+  // El logo de la pestaña Logo, del mismo ancho que el marco, encima
+  const logo = celdasLogo({ ...o, pintura: o.pintura === "original" ? "gris" : o.pintura }, W);
+  return [...logo, [], ...out];
+}
+
+// ── Mostrar y exportar ──
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const css = (c) => (c ? `rgb(${c.join(",")})` : "");
+function aHtml(L) {
+  return L.map((fila) => {
+    let html = "", run = "", clave = null;
+    const cerrar = () => {
+      if (!run) return;
+      const [fg, bg] = clave ? clave.split("|") : ["", ""];
+      html += fg || bg ? `<span style="${fg ? "color:" + fg + ";" : ""}${bg ? "background:" + bg : ""}">${esc(run)}</span>` : esc(run);
+      run = "";
+    };
+    for (const cel of fila) {
+      const k = cel.ch === " " && !cel.bg ? "|" : `${css(cel.fg)}|${css(cel.bg)}`;
+      if (k !== clave) { cerrar(); clave = k; }
+      run += cel.ch;
+    }
+    cerrar();
+    return html;
+  }).join("\n");
+}
+const aTexto = (L) => L.map((f) => f.map((c) => c.ch).join("").replace(/\s+$/, "")).join("\n");
+
+// Script de bash con los colores en código ANSI de 24 bits (Termux, y casi toda terminal moderna)
+function aBash(L) {
+  const k = (c) => (c ? c.join(";") : "");
+  const cuerpo = L.map((fila) => {
+    let fin = fila.length; while (fin > 0 && fila[fin - 1].ch === " " && !fila[fin - 1].bg) fin--; // sin espacios sobrantes
+    let s = "", fg0 = "", bg0 = "";
+    for (const cel of fila.slice(0, fin)) {
+      const fg = cel.ch === " " ? fg0 : k(cel.fg), bg = k(cel.bg); // a un espacio no le importa el color de letra
+      if (fg !== fg0 || bg !== bg0) {
+        s += `\\033[0${fg ? ";38;2;" + fg : ""}${bg ? ";48;2;" + bg : ""}m`;
+        fg0 = fg; bg0 = bg;
+      }
+      s += cel.ch === "\\" ? "\\\\" : cel.ch === "%" ? "%%" : cel.ch; // printf: \ y % se escapan
+    }
+    return s + (fg0 || bg0 ? "\\033[0m" : "");
+  }).join("\n").replace(/'/g, "'\\''");
+  return `#!/usr/bin/env bash\n# Hecho en Forja ANSI\nprintf '${cuerpo}\\n'\n`;
+}
+
+// ── La página ──
+let modo = "logo", ultimo = [];
+// Cada pestaña recuerda su pintura (a una foto le queda su color; a un logo, el gris)
+const pinturaDe = { logo: "gris", imagen: "original", marco: "gris" };
+
+FUENTES.forEach(([f, n]) => $("fuente").add(new Option(`${n} · ${f}`, f)));
+
+function actualizarValores() {
+  $("v-ancho").textContent = $("ancho").value + " col";
+  $("v-estirar").textContent = $("estirar").value + "%";
+  $("v-anchoImg").textContent = $("anchoImg").value + " col";
+  $("v-brillo").textContent = $("brillo").value;
+  $("v-contraste").textContent = $("contraste").value;
+  $("v-mAncho").textContent = $("mAncho").value + " col";
+  $("arte").style.fontSize = $("zoom").value + "px";
+}
+
+let pendiente = 0;
+function programar() { cancelAnimationFrame(pendiente); pendiente = requestAnimationFrame(dibujar); }
+async function dibujar() {
+  actualizarValores();
+  const o = leerOpciones();
+  if (modo !== "imagen" && o.pintura === "original") o.pintura = "gris"; // "colores de la foto" solo existe en Imagen
+  try { await document.fonts.load(`${PESO[o.fuente] || "400"} 100px "${o.fuente}"`, o.texto || "A"); } catch {}
+  ultimo = modo === "logo" ? celdasLogo(o) : modo === "imagen" ? celdasImagen(o) : celdasMarco(o);
+  $("arte").innerHTML = aHtml(ultimo) || '<span style="color:#8d8798">Escribe algo a la izquierda.</span>';
+  const ancho = Math.max(0, ...ultimo.map((f) => f.length));
+  $("medidas").textContent = `${ancho} columnas × ${ultimo.length} renglones` +
+    (ancho > 46 ? " · en Termux vertical (≈45 col) se cortaría: gira el celular o baja el ancho" : " · cabe en Termux vertical");
+}
+
+// Pestañas
+document.querySelectorAll(".pestanas button").forEach((b) => b.addEventListener("click", () => {
+  pinturaDe[modo] = $("pintura").value;
+  modo = b.dataset.modo;
+  document.querySelectorAll(".pestanas button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+  document.querySelectorAll("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== modo));
+  $("pintura").value = pinturaDe[modo];
+  $("pintura").querySelector('[value="original"]').disabled = modo !== "imagen";
+  programar();
+}));
+$("pintura").querySelector('[value="original"]').disabled = true;
+
+$("controles").addEventListener("input", programar);
+$("controles").addEventListener("submit", (e) => e.preventDefault());
+$("zoom").addEventListener("input", actualizarValores);
+
+// Foto: elegir o arrastrar
+function cargarFoto(archivo) {
+  if (!archivo || !archivo.type.startsWith("image/")) { avisar("Eso no es una imagen."); return; }
+  const url = URL.createObjectURL(archivo), img = new Image();
+  img.onload = () => { imagen = img; $("soltar").firstChild.textContent = "✓ " + archivo.name.slice(0, 40) + " — toca para cambiarla"; programar(); };
+  img.onerror = () => avisar("No pude abrir esa imagen. Prueba con JPG o PNG.");
+  img.src = url;
+}
+$("foto").addEventListener("change", (e) => cargarFoto(e.target.files[0]));
+["dragover", "drop"].forEach((ev) => $("soltar").addEventListener(ev, (e) => {
+  e.preventDefault();
+  if (ev === "drop") cargarFoto(e.dataTransfer.files[0]);
+}));
+
+// Copiar (si el navegador no deja, se muestra el texto para copiarlo a mano)
+let tAviso = 0;
+function avisar(t) { $("aviso").textContent = t; clearTimeout(tAviso); tAviso = setTimeout(() => ($("aviso").textContent = ""), 5000); }
+function copiar(texto, que) {
+  const plan_b = () => {
+    const r = $("respaldo"); r.hidden = false; r.value = texto; r.style.minHeight = "140px"; r.focus(); r.select();
+    avisar("Tu navegador no me dejó copiar: ya lo seleccioné abajo, cópialo tú.");
+  };
+  try {
+    navigator.clipboard.writeText(texto).then(() => { $("respaldo").hidden = true; avisar(`✓ Copiado ${que}.`); }, plan_b);
+  } catch { plan_b(); }
+}
+$("copiarTermux").addEventListener("click", () => copiar(aBash(ultimo), "el script para Termux (pégalo en ~/.banner.sh)"));
+$("copiarTexto").addEventListener("click", () => copiar(aTexto(ultimo), "el texto, sin colores"));
+$("copiarWa").addEventListener("click", () => copiar("```" + aTexto(ultimo) + "```", "con ``` para que WhatsApp lo alinee"));
+// Descarga el script como archivo (en Termux: mover de Descargas con  cp ~/storage/downloads/banner.sh ~/.banner.sh)
+$("descargar").addEventListener("click", () => {
+  const url = URL.createObjectURL(new Blob([aBash(ultimo)], { type: "text/x-shellscript" }));
+  const a = document.createElement("a"); a.href = url; a.download = "banner.sh"; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  avisar("✓ Descargado banner.sh");
+});
+
+// El encabezado de la página se hace con el mismo motor
+async function heroe() {
+  try { await document.fonts.load('400 100px "UnifrakturMaguntia"', "Forja"); } catch {}
+  const ancho = window.innerWidth < 560 ? 64 : 120;
+  const L = celdasLogo({
+    texto: "Forja ANSI", fuente: "UnifrakturMaguntia", ancho, estirar: 170, juego: "bloques", relleno: "solido",
+    sombra: true, contorno: false, pintura: "vertical", c1: hex("#f1edf7"), c2: hex("#e05aa8"),
+  });
+  $("heroe").innerHTML = aHtml(L);
+  $("heroe").style.fontSize = window.innerWidth < 560 ? "5px" : "7px";
+}
+
+// La letra de las vistas previas tiene que dar celdas el doble de altas que anchas, como una terminal
+document.fonts.ready.then(() => {
+  const s = document.createElement("span");
+  s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:100px/1 " + getComputedStyle(document.documentElement).getPropertyValue("--f-arte");
+  s.textContent = "█".repeat(40); document.body.appendChild(s);
+  const anchoEm = s.getBoundingClientRect().width / 40 / 100; s.remove();
+  const alto = (anchoEm * ASPECTO).toFixed(3);
+  $("arte").style.lineHeight = alto; $("heroe").style.lineHeight = alto;
+  heroe(); dibujar();
+});
+actualizarValores();
+dibujar();
+</script>
+
+</body>
+</html>
