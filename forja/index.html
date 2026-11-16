@@ -670,21 +670,44 @@ function cajaMenu(o) {
   return colorear(filas, o, W);
 }
 const PRENDIDO = [126, 224, 150], APAGADO = [141, 135, 152];
-function bannerMenu(o) {
-  if (o.nLogoEstilo === "ninguno") return [];
+function bannerMenu(o, alto, tipo = o.nLogoEstilo) {
+  if (tipo === "ninguno") return [];
   // El menú tiene su propio estilo de logo: en Termux las letras ASCII (@#%) se ven sueltas, los bloques no
-  const estilo = o.nLogoEstilo === "igual" ? {}
-    : o.nLogoEstilo === "medios" ? { juego: "medios", relleno: "solido", sombra: false, contorno: false }
+  const estilo = tipo === "igual" ? {}
+    : tipo === "medios" ? { juego: "medios", relleno: "solido", sombra: false, contorno: false }
     : { juego: "bloques", relleno: "solido", sombra: true, contorno: false };
   const fuente = o.nFuente || o.fuente;
   // Su propio alto: con el teclado abierto a Termux le quedan ~29 renglones y el menú entero tiene que caber
-  if (o.nLogoEstilo !== "igual") estilo.estirar = o.nAlto;
+  if (tipo !== "igual" || alto) estilo.estirar = alto || o.nAlto;
   const L = celdasLogo({ ...o, ...estilo, fuente, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho);
   // Sin renglones vacíos arriba ni abajo: en el celular cada renglón cuenta
   const vacia = (f) => f.every((c) => c.ch === " ");
   while (L.length && vacia(L[0])) L.shift();
   while (L.length && vacia(L[L.length - 1])) L.pop();
   return L;
+}
+// Logo de un solo renglón, para cuando no cabe otra cosa:  ░▒▓ N U L L ▓▒░
+function logoMini(o) {
+  const t = (o.texto.split("\n").find((l) => l.trim()) || "NULL").trim().toUpperCase().slice(0, 14).split("").join(" ");
+  const pinta = o.pintura !== "ninguno";
+  const partes = [["░▒▓ ", pinta ? oscuro(o.c2, 0.2) : null], [t, null], [" ▓▒░", pinta ? oscuro(o.c2, 0.2) : null]];
+  const fila = [];
+  for (const [txt, fg] of partes) [...txt].forEach((ch, i) => fila.push({ ch, fg: fg || (pinta ? mezcla(o.c1, o.c2, t.length > 1 ? i / (t.length - 1) : 0) : null) }));
+  const izq = Math.max(0, Math.floor((o.nAncho - fila.length) / 2));
+  return [[...Array.from({ length: izq }, () => ({ ch: " ", fg: null })), ...fila]];
+}
+// Varios tamaños del mismo logo, del más grande al más chico. En Termux se usa el más grande que
+// quepa (con el teclado abierto cabe menos); el último es de un renglón y siempre cabe.
+function tamanosMenu(o) {
+  if (o.nLogoEstilo === "ninguno") return [];
+  const lista = [bannerMenu(o)];
+  const otros = [
+    bannerMenu(o, Math.round(o.nAlto * 0.62)),
+    bannerMenu(o, Math.round(o.nAlto * 0.42), "medios"),
+    logoMini(o),
+  ];
+  for (const L of otros) if (L.length && L.length < lista[lista.length - 1].length) lista.push(L);
+  return lista;
 }
 // Renglones que ocupa el menú con logo: logo + hueco + estado + caja + "elige" + 2 para lo que se escriba
 function renglonesMenu(o, banner) {
@@ -777,22 +800,22 @@ const comillas = (s) => s.replace(/'/g, "'\\''"); // dentro de '…' de bash, un
 const bloqueBash = (L, limpiar) => `printf '${comillas(L.map((f) => lineaAnsi(f, limpiar)).join("\n"))}\\n'`;
 
 // Las funciones de bash del banner: banner (quieto) y, si hay animación, banner_anim
-function bashBanner(L, anim) {
-  const quieto = `banner() {\n${bloqueBash(L)}\n}`;
-  if (anim === "ninguna" || !L.length) return { fn: quieto, llamar: "banner" };
+function bashBanner(L, anim, nombre = "banner") {
+  const quieto = `${nombre}() {\n${bloqueBash(L)}\n}`;
+  if (anim === "ninguna" || !L.length) return { fn: quieto, llamar: nombre };
   if (anim === "renglones") {
-    return { llamar: "banner_anim", fn: quieto + "\nbanner_anim() {\n" + L.map((f) => `  printf '${comillas(lineaAnsi(f))}\\n'; sleep 0.03`).join("\n") + "\n}" };
+    return { llamar: nombre + "_anim", fn: quieto + `\n${nombre}_anim() {\n` + L.map((f) => `  printf '${comillas(lineaAnsi(f))}\\n'; sleep 0.03`).join("\n") + "\n}" };
   }
   // Los demás redibujan en el mismo lugar: imprimen el cuadro y suben el cursor H renglones
   const H = L.length, W = Math.max(...L.map((f) => f.length));
   const pasos = cuadros(L, anim).map((c) => `  ${bloqueBash(c.L, true)}; sleep ${(c.ms / 1000).toFixed(2)}; printf '\\033[${H}A'`).join("\n");
   return {
-    llamar: "banner_anim",
-    fn: quieto + `\nbanner_anim() {
+    llamar: nombre + "_anim",
+    fn: quieto + `\n${nombre}_anim() {
   local filas cols
   read -r filas cols < <(stty size 2>/dev/null)
   # Si la pantalla es más chica que el banner, sale quieto (redibujar encima necesita que quepa)
-  if [ -z "$cols" ] || [ "$cols" -lt ${W} ] || [ "$filas" -le ${H} ]; then banner; return; fi
+  if [ -z "$cols" ] || [ "$cols" -lt ${W} ] || [ "$filas" -le ${H} ]; then ${nombre}; return; fi
   printf '\\033[?25l'
 ${pasos}
   ${bloqueBash(L, true)}
@@ -808,7 +831,10 @@ function aBash(L, anim = "ninguna") {
 }
 // El menú completo: banner, estado de Null, la caja con opciones y un case que corre lo elegido
 function aMenu(o) {
-  const ops = opcionesMenu(o), banner = bannerMenu(o), b = bashBanner(banner, o.anim);
+  const ops = opcionesMenu(o), tams = tamanosMenu(o);
+  // banner1 es el grande (el único animado); los demás, más chicos, por si no cabe
+  const bs = tams.map((L, i) => bashBanner(L, i ? "ninguna" : o.anim, "banner" + (i + 1)));
+  const anchoDe = (L) => Math.max(...L.map((f) => f.length));
   const color = (rgb) => (o.pintura === "ninguno" ? "" : `\\033[38;2;${rgb.join(";")}m`);
   return [
     "#!/usr/bin/env bash",
@@ -816,7 +842,7 @@ function aMenu(o) {
     "# Para cambiar lo que hace una opción, edita su renglón en el case de abajo (o vuelve a la Forja).",
     ARREGLAR,
     "trap 'true' INT  # Ctrl+C detiene lo que esté corriendo (por ejemplo Null) pero no cierra el menú",
-    banner.length ? b.fn : "banner() { :; }",
+    ...bs.map((b) => b.fn),
     o.nEstado
       ? `estado() {
   command -v pgrep >/dev/null || return
@@ -826,18 +852,25 @@ function aMenu(o) {
 }`
       : "estado() { :; }",
     `caja() {\n${bloqueBash(cajaMenu(o))}\n}`,
-    banner.length ? `# El menú con logo necesita ${renglonesMenu(o, banner)} renglones y ${Math.max(...banner.map((f) => f.length))} columnas
+    tams.length ? `# cabe RENGLONES COLUMNAS: ¿hay pantalla para el menú con ese logo?
 cabe() {
   local filas cols
   read -r filas cols < <(stty size 2>/dev/null)
-  [ -z "$filas" ] || { [ "$filas" -ge ${renglonesMenu(o, banner)} ] && [ "$cols" -ge ${Math.max(...banner.map((f) => f.length))} ]; }
+  [ -z "$filas" ] || { [ "$filas" -ge "$1" ] && [ "$cols" -ge "$2" ]; }
 }` : "",
     "primera=1",
     "while true; do",
     "  clear",
-    // El logo solo sale si cabe todo el menú; si no (por ejemplo con el teclado abierto), va sin logo
-    // en vez de que la terminal lo empuje hacia arriba y se vea cortado
-    banner.length ? `  if cabe; then ${b.llamar === "banner_anim" ? 'if [ -n "$primera" ]; then banner_anim; else banner; fi' : "banner"}; echo; fi\n  primera=` : "",
+    // Se usa el logo más grande que deje ver todo el menú (si no, la terminal lo empuja hacia arriba
+    // y se ve cortado). El último, de un renglón, sale siempre.
+    ...(tams.length ? [
+      tams.map((L, i) => {
+        const llamar = bs[i].llamar !== bs[i].llamar.replace(/_anim$/, "") ? `if [ -n "$primera" ]; then ${bs[i].llamar}; else banner1; fi` : bs[i].llamar;
+        if (i === tams.length - 1) return (i ? "  else " : "  ") + llamar + (i ? "; fi" : "");
+        return `  ${i ? "elif" : "if"} cabe ${renglonesMenu(o, L)} ${anchoDe(L)}; then ${llamar}`;
+      }).join("\n"),
+      "  echo; primera=",
+    ] : []),
     "  estado",
     "  caja",
     `  read -rp $'  ${color(o.c2)}elige › \\033[0m' op || exit 0`,
@@ -905,8 +938,8 @@ async function dibujar() {
   $("medidas").textContent = `${ancho} columnas × ${ultimo.length} renglones` +
     (ancho > 46 ? " · en Termux vertical (≈45 col) se cortaría: gira el celular o baja el ancho" : " · cabe en Termux vertical");
   if (modo === "menu" && o.nLogoEstilo !== "ninguno") {
-    const r = renglonesMenu(o, bannerMenu(o));
-    $("medidas").textContent += ` · con logo pide ${r} renglones` + (r > 29 ? " (con el teclado abierto Termux tiene ~29: saldrá sin logo; baja el alto)" : " (cabe aun con el teclado abierto)");
+    const t = tamanosMenu(o).map((L) => L.length);
+    $("medidas").textContent += ` · el logo viene en ${t.length} tamaños (${t.join(", ")} renglones): Termux usa el más grande que quepa`;
   }
 }
 
