@@ -130,7 +130,9 @@ button.fabrica:hover { color: var(--texto); }
         <div class="titulo-grupo">bloques</div>
         <label>Juego de caracteres
           <select id="juego">
-            <option value="bloques">Bloques ░▒▓█ (estilo scene)</option>
+            <option value="terminal">Letras de terminal ██╗ (se ven bien en cualquier Termux)</option>
+            <option value="terminal2">Letras de terminal compactas ▀▄ (para pantallas angostas)</option>
+            <option value="bloques">Bloques ░▒▓█ (estilo scene, con la letra de arriba)</option>
             <option value="medios">Medios bloques ▀▄ (más fino)</option>
             <option value="ascii">ASCII puro @#%*</option>
             <option value="braille">Braille ⣿ (mucho detalle)</option>
@@ -145,7 +147,8 @@ button.fabrica:hover { color: var(--texto); }
             <option value="hueco">Hueco (borde lleno, dentro ░)</option>
           </select>
         </label>
-        <label class="fila"><input type="checkbox" id="sombra" checked> Sombra en trama</label>
+        <label class="fila"><input type="checkbox" id="sombra" checked> Sombra</label>
+        <div class="medidas" id="notaTerminal">Con las letras de terminal no se usan la letra, el estirar, el relleno ni el contorno: ya vienen dibujadas.</div>
         <label class="fila"><input type="checkbox" id="contorno"> Contorno</label>
       </div>
 
@@ -230,6 +233,7 @@ Respaldo a Descargas | pgrep -f "[n]ode index.js" >/dev/null && echo "Apaga Null
         </label>
         <label>Estilo del logo
           <select id="nLogoEstilo">
+            <option value="terminal">Letras de terminal ██╗ (recomendado)</option>
             <option value="bloques">Bloques ░▒▓█ con sombra</option>
             <option value="medios">Medios bloques ▀▄ (más fino)</option>
             <option value="igual">Igual que en la pestaña Logo</option>
@@ -298,6 +302,8 @@ Respaldo a Descargas | pgrep -f "[n]ode index.js" >/dev/null && echo "Apaga Null
           <li>Que salga cada vez que abres: <code>echo 'bash ~/.banner.sh' &gt;&gt; ~/.bashrc</code></li>
           <li>Para quitar el saludo de Termux que sale arriba: <code>touch ~/.hushlogin</code></li>
           <li>Pruébalo sin cerrar: <code>bash ~/.banner.sh</code>. Si se ve cortado, baja el ancho aquí: Termux en vertical cabe ~45 columnas; en horizontal o en la laptop, 80 o más.</li>
+          <li>¿Bloques con rayitas o las <b>l</b> e <b>i</b> como barras gruesas? Es la letra de Termux, no tu dibujo. Pon una clara: <code>mkdir -p ~/.termux &amp;&amp; curl -fsSL -o ~/.termux/font.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmono/NotoSansMono%5Bwdth,wght%5D.ttf &amp;&amp; termux-reload-settings</code> (si tienes Null: <code>cp ~/null2/assets/fuentes/JetBrainsMono.ttf ~/.termux/font.ttf</code>).</li>
+          <li>Para que se vea bien en cualquier Termux usa <b>Letras de terminal</b> y sin animación o "renglón por renglón": las sombras ░▒▓ cambian según la letra de cada celular.</li>
           <li>En la laptop (Linux o Mac) es igual, en <code>~/.bashrc</code> o <code>~/.zshrc</code>.</li>
         </ol>
       </details>
@@ -309,7 +315,7 @@ Respaldo a Descargas | pgrep -f "[n]ode index.js" >/dev/null && echo "Apaga Null
           <li>Ponlo como comando: <code>cp ~/storage/downloads/<span class="nombreCmd">null</span>.sh $PREFIX/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x $PREFIX/bin/<span class="nombreCmd">null</span></code></li>
           <li>Ábrelo escribiendo <code class="nombreCmd">null</code>. Eliges con el número y <kbd>Enter</kbd>; <kbd>0</kbd> sale. <kbd>Ctrl</kbd>+<kbd>C</kbd> detiene lo que esté corriendo (por ejemplo Null) y te regresa al menú.</li>
           <li>Que salga solo al abrir Termux: <code>echo <span class="nombreCmd">null</span> &gt;&gt; ~/.bashrc</code> (y <code>touch ~/.hushlogin</code> para quitar el saludo).</li>
-          <li>¿Las <b>l</b> y las <b>i</b> salen como barras gruesas? Es la letra de Termux. Pon una clara (Null ya la trae): <code>mkdir -p ~/.termux &amp;&amp; cp ~/null2/assets/fuentes/JetBrainsMono.ttf ~/.termux/font.ttf &amp;&amp; termux-reload-settings</code></li>
+          <li>¿Las <b>l</b> y las <b>i</b> salen como barras gruesas? Es la letra de Termux. Pon una clara: <code>mkdir -p ~/.termux &amp;&amp; curl -fsSL -o ~/.termux/font.ttf https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmono/NotoSansMono%5Bwdth,wght%5D.ttf &amp;&amp; termux-reload-settings</code> (si tienes Null: <code>cp ~/null2/assets/fuentes/JetBrainsMono.ttf ~/.termux/font.ttf</code>)</li>
           <li>En la laptop: <code>mkdir -p ~/.local/bin &amp;&amp; cp ~/Descargas/<span class="nombreCmd">null</span>.sh ~/.local/bin/<span class="nombreCmd">null</span> &amp;&amp; chmod +x ~/.local/bin/<span class="nombreCmd">null</span></code>. "Respaldo a Descargas" usa la carpeta de Termux: cámbialo ahí.</li>
         </ol>
       </details>
@@ -383,6 +389,99 @@ function subs(P, f, c, campo = "A") {
 const BIT = [0x1, 0x8, 0x2, 0x10, 0x4, 0x20, 0x40, 0x80];
 const braille = (s, u) => String.fromCharCode(0x2800 + s.reduce((m, v, i) => (v > u ? m | BIT[i] : m), 0));
 
+// ── LETRAS DE TERMINAL ──
+// Un abecedario dibujado a mano en cuadritos de 5 de alto (# = lleno). Con esto el logo no depende de
+// cómo dibuje cada Termux las sombras ░▒▓: solo usa piezas que llenan la celda (█ ▀ ▄ y ╗║═),
+// que toda letra de terminal pinta igual. Es el mismo truco que usan los programas (y la portada de Null).
+const PIXELES = {
+  A: ".##.|#..#|####|#..#|#..#", B: "###.|#..#|###.|#..#|###.", C: ".###|#...|#...|#...|.###",
+  D: "###.|#..#|#..#|#..#|###.", E: "####|#...|###.|#...|####", F: "####|#...|###.|#...|#...",
+  G: ".###|#...|#.##|#..#|.###", H: "#..#|#..#|####|#..#|#..#", I: "###|.#.|.#.|.#.|###",
+  J: "..##|...#|...#|#..#|.##.", K: "#..#|#.#.|##..|#.#.|#..#", L: "#...|#...|#...|#...|####",
+  M: "#...#|##.##|#.#.#|#...#|#...#", N: "#...#|##..#|#.#.#|#..##|#...#", O: ".##.|#..#|#..#|#..#|.##.",
+  P: "###.|#..#|###.|#...|#...", Q: ".##.|#..#|#..#|#.##|.###", R: "###.|#..#|###.|#.#.|#..#",
+  S: ".###|#...|.##.|...#|###.", T: "#####|..#..|..#..|..#..|..#..", U: "#..#|#..#|#..#|#..#|.##.",
+  V: "#...#|#...#|#...#|.#.#.|..#..", W: "#...#|#...#|#.#.#|##.##|#...#", X: "#...#|.#.#.|..#..|.#.#.|#...#",
+  Y: "#...#|.#.#.|..#..|..#..|..#..", Z: "####|...#|.##.|#...|####",
+  0: ".##.|#.##|#..#|##.#|.##.", 1: ".#|##|.#|.#|.#", 2: "###.|...#|.##.|#...|####", 3: "###.|...#|.##.|...#|###.",
+  4: "#..#|#..#|####|...#|...#", 5: "####|#...|###.|...#|###.", 6: ".##.|#...|###.|#..#|.##.",
+  7: "####|...#|..#.|.#..|.#..", 8: ".##.|#..#|.##.|#..#|.##.", 9: ".##.|#..#|.###|...#|.##.",
+  " ": "..|..|..|..|..", ".": ".|.|.|.|#", "!": "#|#|#|.|#", "?": "###.|...#|.##.|....|.#..",
+  "-": "...|...|###|...|...", ":": ".|#|.|#|.", "_": "....|....|....|....|####", "/": "...#|..#.|.##.|.#..|#...",
+};
+// Un renglón de texto → rejilla de pixeles (true = lleno), con 1 pixel de aire entre letras
+function pixelesDe(texto) {
+  const limpio = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const letras = [...limpio].map((ch) => PIXELES[ch]).filter(Boolean).map((g) => g.split("|"));
+  if (!letras.length) return null;
+  const filas = Array.from({ length: 5 }, () => []);
+  letras.forEach((g, i) => {
+    for (let y = 0; y < 5; y++) { for (const p of g[y]) filas[y].push(p === "#"); if (i < letras.length - 1) filas[y].push(false); }
+  });
+  return filas;
+}
+// Grande: cada pixel = "██" (dos columnas: así queda cuadrado, la celda es el doble de alta) y la
+// sombra con líneas dobles ╗║═ abajo y a la derecha, como los banners clásicos de terminal
+function terminalGrande(px, sombra) {
+  const H = px.length, W = px[0].length * 2;
+  const F = (y, x) => y >= 0 && y < H && x >= 0 && x < W && px[y][x >> 1];
+  const alto = H + (sombra ? 1 : 0), ancho = W + (sombra ? 1 : 0);
+  const S = (y, x) => sombra && !F(y, x) && (F(y, x - 1) || F(y - 1, x) || F(y - 1, x - 1)) && y < alto && x < ancho && y >= 0 && x >= 0;
+  const G = [];
+  for (let y = 0; y < alto; y++) {
+    const fila = [];
+    for (let x = 0; x < ancho; x++) {
+      if (F(y, x)) { fila.push({ ch: "█", rol: "letra" }); continue; }
+      if (!S(y, x)) { fila.push({ ch: " ", rol: null }); continue; }
+      // La pieza de la sombra según con qué se une (otra sombra o la letra)
+      // (sX = hay sombra de ese lado, fX = hay letra). La letra de la izquierda solo cuenta si arriba no hay letra:
+      // así debajo de una barra la sombra arranca con ╔ y no se pega al palo de la izquierda.
+      const su = S(y - 1, x), sd = S(y + 1, x), sl = S(y, x - 1), sr = S(y, x + 1);
+      const fu = F(y - 1, x), fd = F(y + 1, x), fl = F(y, x - 1) && !fu, fr = F(y, x + 1);
+      const u = su || fu, d = sd || fd, l = sl || fl, r = sr || fr;
+      const ch = (sl && r) || (sr && l && !(fu && d)) ? "═"          // tramo acostado
+        : (su && d) || (u && sd && !sr) ? "║"                          // tramo parado
+        : d && r && !l ? "╔" : d && l ? "╗" : u && r ? "╚" : u && l ? "╝" // esquinas
+        : sl || sr ? "═" : "║";
+      fila.push({ ch, rol: "sombra" });
+    }
+    G.push(fila);
+  }
+  return G;
+}
+// Compacta: cada pixel = media celda (▀ ▄ █): la mitad de ancho y 3 renglones
+function terminalCompacta(px) {
+  const G = [];
+  for (let y = 0; y < px.length; y += 2) {
+    G.push(px[y].map((arriba, x) => {
+      const abajo = px[y + 1]?.[x];
+      const ch = arriba && abajo ? "█" : arriba ? "▀" : abajo ? "▄" : " ";
+      return { ch, rol: ch === " " ? null : "letra" };
+    }));
+  }
+  return G;
+}
+// El logo entero (hasta 3 renglones de texto). Si la grande no cabe en el ancho, usa la compacta.
+function celdasTerminal(o, anchoTotal = o.ancho, forma = o.juego === "terminal2" ? "compacta" : "grande") {
+  const lineas = o.texto.split("\n").map(pixelesDe).filter(Boolean).slice(0, 3);
+  if (!lineas.length) return [];
+  const armar = (f) => {
+    const bloques = lineas.map((px) => (f === "grande" ? terminalGrande(px, o.sombra) : terminalCompacta(px)));
+    const W = Math.max(...bloques.map((b) => b[0].length));
+    const G = [];
+    bloques.forEach((b, i) => {
+      if (i) G.push(Array.from({ length: W }, () => ({ ch: " ", rol: null })));
+      // Cada renglón centrado respecto al más ancho
+      const izq = Math.floor((W - b[0].length) / 2);
+      for (const fila of b) G.push([...Array.from({ length: izq }, () => ({ ch: " ", rol: null })), ...fila, ...Array.from({ length: W - izq - fila.length }, () => ({ ch: " ", rol: null }))]);
+    });
+    return G;
+  };
+  let G = armar(forma);
+  if (forma === "grande" && G[0].length > anchoTotal) G = armar("compacta");
+  return pintar(G, o);
+}
+
 // ── LOGO ──
 function rasterLogo(o, cols) {
   const lineas = o.texto.split("\n").map((s) => s.trimEnd()).slice(0, 3);
@@ -413,6 +512,7 @@ function rasterLogo(o, cols) {
 }
 
 function celdasLogo(o, anchoTotal = o.ancho) {
+  if (o.juego === "terminal" || o.juego === "terminal2") return celdasTerminal(o, anchoTotal);
   const margen = o.contorno ? 2 : 0, extra = o.sombra ? 2 : 0;
   const r = rasterLogo(o, Math.max(8, anchoTotal - margen - extra));
   if (!r) return [];
@@ -672,6 +772,7 @@ function cajaMenu(o) {
 const PRENDIDO = [126, 224, 150], APAGADO = [141, 135, 152];
 function bannerMenu(o, alto, tipo = o.nLogoEstilo) {
   if (tipo === "ninguno") return [];
+  if (tipo === "terminal") return celdasTerminal({ ...o, sombra: true, pintura: o.pintura === "original" ? "gris" : o.pintura }, o.nAncho, alto === "compacta" ? "compacta" : "grande");
   // El menú tiene su propio estilo de logo: en Termux las letras ASCII (@#%) se ven sueltas, los bloques no
   const estilo = tipo === "igual" ? {}
     : tipo === "medios" ? { juego: "medios", relleno: "solido", sombra: false, contorno: false }
@@ -701,13 +802,18 @@ function logoMini(o) {
 function tamanosMenu(o) {
   if (o.nLogoEstilo === "ninguno") return [];
   const lista = [bannerMenu(o)];
-  const otros = [
+  const otros = o.nLogoEstilo === "terminal" ? [bannerMenu(o, "compacta"), logoMini(o)] : [
     bannerMenu(o, Math.round(o.nAlto * 0.62)),
     bannerMenu(o, Math.round(o.nAlto * 0.42), "medios"),
     logoMini(o),
   ];
   for (const L of otros) if (L.length && L.length < lista[lista.length - 1].length) lista.push(L);
-  return lista;
+  // Cada tamaño centrado sobre la caja del menú
+  const centrar = (L) => {
+    const W = Math.max(...L.map((f) => f.length)), izq = Math.max(0, Math.floor((o.nAncho - W) / 2));
+    return izq ? L.map((f) => [...Array.from({ length: izq }, () => ({ ch: " ", fg: null })), ...f]) : L;
+  };
+  return lista.map((L, i) => (i === lista.length - 1 && L.length === 1 ? L : centrar(L)));
 }
 // Renglones que ocupa el menú con logo: logo + hueco + estado + caja + "elige" + 2 para lo que se escriba
 function renglonesMenu(o, banner) {
@@ -716,7 +822,7 @@ function renglonesMenu(o, banner) {
 // Lo que se ve en la página: banner, estado de ejemplo, la caja y el renglón donde se escribe
 function celdasMenu(o) {
   const linea = (t, fg) => [...t].map((ch) => ({ ch, fg }));
-  const banner = bannerMenu(o);
+  const banner = tamanosMenu(o)[0] || [];
   return [
     ...banner, ...(banner.length ? [[]] : []),
     ...(o.nEstado ? [linea("  ● Null prendido", PRENDIDO)] : []),
@@ -741,15 +847,12 @@ function cuadros(L, anim) {
   if (anim === "glitch") {
     // Señal rota: unos renglones se corren de lado y algunas letras cambian a ruido cian o magenta
     const r = azar(L.length * 7919 + (L[0]?.length || 0)), RUIDO = "░▒▓█▀▄▌▐/|#=", TINTE = [[111, 214, 224], [224, 90, 168]];
-    const vacio = (n) => Array.from({ length: n }, () => ({ ch: " ", fg: null }));
     return [0, 1, 2, 3, 4, 5].map((k) => ({
       ms: k % 2 ? 45 : 90,
       L: L.map((fila) => {
-        let f = fila.map((c) => (c.ch.trim() && r() < 0.08 ? { ch: RUIDO[(r() * RUIDO.length) | 0], fg: TINTE[(r() * 2) | 0], bg: c.bg } : c));
-        if (f.length && r() < 0.28) {
-          const d = 1 + ((r() * 3) | 0);
-          f = r() < 0.5 ? [...vacio(d), ...f].slice(0, fila.length) : [...f.slice(d), ...vacio(d)];
-        }
+        const f = fila.map((c) => (c.ch.trim() && r() < 0.08 ? { ch: RUIDO[(r() * RUIDO.length) | 0], fg: TINTE[(r() * 2) | 0], bg: c.bg } : c));
+        // Antes también corría renglones de lado, pero en Termux se veía como que el logo se movía:
+        // ahora solo cambian letras de lugar, el dibujo se queda quieto
         return f;
       }),
     }));
@@ -920,6 +1023,9 @@ function programar() { cancelAnimationFrame(pendiente); pendiente = requestAnima
 async function dibujar() {
   animando++; // si se estaba viendo una animación, se corta
   actualizarValores();
+  const deTerminal = $("juego").value.startsWith("terminal");
+  ["fuente", "estirar", "relleno", "contorno"].forEach((id) => ($(id).disabled = deTerminal));
+  $("notaTerminal").hidden = !deTerminal;
   const o = leerOpciones();
   if (modo !== "imagen" && o.pintura === "original") o.pintura = "gris"; // "colores de la foto" solo existe en Imagen
   try {
@@ -993,7 +1099,7 @@ $("probar").addEventListener("click", async () => {
   const o = leerOpciones();
   if (o.anim === "ninguna") { avisar("Elige una animación en «al abrir»."); return; }
   // En el menú solo se anima el banner; lo de abajo aparece al final
-  const banner = modo === "menu" ? bannerMenu(o) : ultimo, final = ultimo;
+  const banner = modo === "menu" ? (tamanosMenu(o)[0] || []) : ultimo, final = ultimo;
   // Lo de abajo del banner (en el menú, la caja) se queda quieto mientras tanto; en "renglones" sale al final
   const resto = o.anim === "renglones" ? [] : ultimo.slice(banner.length);
   if (!banner.length) { avisar("No hay banner que animar."); return; }
